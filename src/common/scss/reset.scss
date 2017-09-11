@@ -1,0 +1,18 @@
+html, body, span, h1, h2, h3, h4, h5, h6, a,
+ol, ul, li, p, input, strong, dl, dd, dt,
+article, textarea, button {
+  padding: 0;
+  margin: 0;
+  font-size: 100%; //是相对于父元素的一个比值  比如说h1默认固定32px body设置16px h1设置100%，那么它就是16px
+  vertical-align: middle;
+  font-weight: normal;
+}
+
+a, a:hover, a:visited, a:active {
+  text-decoration: none;
+  color: #7e8c8d;
+}
+
+li {
+  list-style: none;
+}

@@ -1,0 +1,15 @@
+//基本样式定义
+html {
+  //todo 加‘’和不加有啥区别
+  font-family: 'PingFang SC', 'STHeitiSC-Light', 'Helvetica-Light', arial, sans-serif, 'Droid Sans Fallback';
+
+  //设定这个值是有意义的  保证了父元素的高度等于子元素字体的大小  比如说div的高度就是子元素的font-size=16px
+  //而如果不设置这个值的话，div的高度就是子元素的实际高度，一般是字体大小的1.2倍
+  //注意决定父元素高度的始终是line-height 而不是子元素高度，line-height 默认高度为子元素高度
+  line-height: 1;
+
+  //不允许选中
+  user-select: none;
+  background-color: $color-background;
+  color: $color-text;
+}

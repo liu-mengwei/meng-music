@@ -1,0 +1,52 @@
+.l {
+  float: left;
+}
+
+.r {
+  float: right;
+}
+
+@mixin bg-img($url) {
+  background-image: url('#{$url}@2x.png');
+
+  @media (-webkit-device-pixel-ratio: 3) {
+    background-image: url('#{$url}@3x.png');
+  }
+
+  @media (min-device-pixel-ratio: 3) {
+    background-image: url('#{$url}@3x.png');
+  }
+}
+
+//覆盖定宽定高的元素
+@mixin bg-cover() {
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+//利用相对定位竖直居中 知道父元素的高度 但不能是auto  不知道什么情况会失效
+@mixin vertical-center() {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+//宽高相同的正方形
+@mixin square($width) {
+  width: $width;
+  height: $width;
+}
+
+@mixin nowrap() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin line-height($height) {
+  height: $height;
+  line-height: $height;
+}
+
+

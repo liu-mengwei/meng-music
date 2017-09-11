@@ -1,4 +1,6 @@
 //基本样式定义
+@import "variable";
+
 html {
   //todo 加‘’和不加有啥区别
   font-family: 'PingFang SC', 'STHeitiSC-Light', 'Helvetica-Light', arial, sans-serif, 'Droid Sans Fallback';
@@ -12,4 +14,8 @@ html {
   user-select: none;
   background-color: $color-background;
   color: $color-text;
+}
+
+body {
+  font-size: $font-size-medium;
 }

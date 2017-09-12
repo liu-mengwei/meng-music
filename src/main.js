@@ -9,7 +9,7 @@ import 'common/scss/index.scss'
 
 import Vue from 'vue'
 import App from './App'
-//import router from './router/index'
+import router from './router/index'
 import fastclick from 'fastclick'
 
 fastclick.attach(document.body);
@@ -18,7 +18,7 @@ Vue.config.productionTip = false;
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
-  //router,
+  router,
   template: '<App/>',
   components: {App}
 });

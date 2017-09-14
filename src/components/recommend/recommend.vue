@@ -1,8 +1,8 @@
 <template>
   <div class="recommend">
     <!--这里为什么需要一个container 因为我觉得控制padding margin应该交由父组件控制-->
-    <div class="slider-container" v-if="this.sliderList.length > 0">
-      <slider>
+    <div class="slider-container" ref="sliderContainer">
+      <slider v-if="this.sliderList.length > 0">
         <a v-for="slider in sliderList" :href="slider.linkUrl">
           <img :src="slider.picUrl">
         </a>
@@ -13,7 +13,7 @@
 
 <script type="text/ecmascript-6">
   import getRecommend from 'api/recommend'
-  import {ERR_OK} from 'api/config'
+  import {ERR_OK, SLIDER_RATIO} from 'api/config'
   import Slider from 'base/slider'
 
   export default {
@@ -26,12 +26,21 @@
 
     //todo 得去深入看一下组件的生命周期
     created() {
+      console.log('recommend组件创建');
       this._getRecommend();
     },
 
     mounted(){
-      console.log('recommed组件渲染');
+      this._setSliderContainerWidth();
+      window.addEventListener('resize', () => {
+        this._setSliderContainerWidth();
+      });
     },
+
+    updated(){
+      console.log('recommend组件更新')
+    },
+
 
     methods: {
       //请求接口
@@ -45,6 +54,11 @@
             self.sliderList = res.data.slider;
           }
         });
+      },
+
+      _setSliderContainerWidth(){
+        let sliderContainer = this.$refs.sliderContainer;
+        sliderContainer.style.height = sliderContainer.clientWidth / SLIDER_RATIO + 'px';
       }
     },
 
@@ -55,4 +69,11 @@
 </script>
 
 <style scoped rel="stylesheet/scss" lang="scss">
+  .recommend {
+    .slider-container {
+      overflow: hidden;
+    }
+  }
+
+
 </style>

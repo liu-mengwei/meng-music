@@ -13,4 +13,10 @@ export const options = {
   prefix: 'jp'
 };
 
+//轮播图组件宽高比
+export const SLIDER_RATIO = 2.5;
+
+//服务器返回状态码
 export const ERR_OK = 0;
+
+

@@ -48,6 +48,10 @@
       }
     },
 
+    created(){
+      console.log('slider组件创建');
+    },
+
     //只有在这个钩子里才能取到ref dom节点
     mounted(){
       //可以在回掉中用箭头函数，选择自己的this指向 绑定父级上下文
@@ -76,7 +80,8 @@
         let childern = this.$refs.sliderWrapper.children;
         let sliderWidth = 0;
 
-        for (let child of childern) {
+        for (var i = 0; i < childern.length; i++) {
+          var child = childern[i];
 
           //这种通用性强不强啊 这还不是默认了父组件会传一个a 里面是一个img
           addClass(child, 'slider-item');

@@ -14,3 +14,19 @@ export function hasClass(el, className) {
   return reg.test(el.className);
 }
 
+export function getData(el, name, val) {
+  const prefix = 'data-';
+
+  let attr = prefix + name;
+  if (val) {
+    el.setAttribute(attr, val);
+  } else {
+    return el.getAttribute(attr);
+  }
+}
+
+//单位换算
+export function getPx(value) {
+  return value * Number(document.documentElement.style.fontSize.replace('px', ''));
+}
+

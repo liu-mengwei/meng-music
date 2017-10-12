@@ -11,9 +11,17 @@ import Vue from 'vue'
 import App from './App'
 import router from './router/index'
 import fastclick from 'fastclick'
+import VueLazyload from 'vue-lazyload'
 
 fastclick.attach(document.body);
 Vue.config.productionTip = false;
+
+Vue.use(VueLazyload, {
+  preLoad: 1.3,
+  //todo webpack会解析这里的路径 还是奇怪webpack的工作原理
+  loading: require('common/image/default.png'),
+  attempt: 1
+});
 
 /* eslint-disable no-new */
 new Vue({

@@ -40,10 +40,6 @@
       }, 20);
     },
 
-    updated(){
-      console.log('scroll组件更新');
-    },
-
     methods: {
       refresh(){
         this.scroll && this.scroll.refresh();

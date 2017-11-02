@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="singer-wrapper">
     <listview class="singer" :data="singerList" @selectItem="selectSinger"></listview>
     <router-view></router-view>
   </div>
@@ -7,10 +7,11 @@
 
 <script type="text/ecmascript-6">
   import {getSingerList} from 'api/singer'
-  import Singer from 'common/js/Singer'
+  import Singer from 'class/Singer'
   import Listview from 'base/listview'
   import SingerDetail from '../singer-detail/singer-detail'
   import router from '../../router/index'
+  import {mapMutations} from 'vuex'
 
   const HOT_NAME = '热门';
   const HOT_LENTH = 10;
@@ -30,6 +31,7 @@
       //监听选择歌手的事件
       selectSinger(singer) {
         router.push(`/singer/${singer.id}`);
+        this.setSinger(singer);
       },
 
       _getSingerList() {
@@ -87,7 +89,15 @@
         ret = hot.concat(ret);
 
         return ret;
-      }
+      },
+
+      //展开运算符 这里引入vuex的目的 就是跨组件数据传递
+      //语法糖 相当于setSinger(){
+      //  this.$store.commit('SET_SINGER')
+      // }
+      ...mapMutations({
+        setSinger: 'SET_SINGER'
+      })
     },
 
     components: {
@@ -98,11 +108,17 @@
 </script>
 
 <style scoped rel="stylesheet/scss" lang="scss">
-  .singer {
+  .singer-wrapper {
     position: fixed;
     top: 0.9rem;
     bottom: 0;
     width: 100%;
+    overflow: hidden;
+
+    .singer {
+      width: 100%;
+      height: 100%;
+    }
   }
 </style>
 

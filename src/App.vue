@@ -3,8 +3,11 @@
     <m-header class="header"></m-header>
     <tab class="tab"></tab>
     <keep-alive>
-      <router-view></router-view>
+      <transition name="toggle">
+        <router-view></router-view>
+      </transition>
     </keep-alive>
+    <player></player>
   </div>
 </template>
 
@@ -13,11 +16,13 @@
   //一般通常来讲 Mheader 要大写 因为这通常代表是一个类
   import MHeader from 'components/m-header/m-header'
   import Tab from 'components/tab/tab'
+  import Player from 'components/player/player'
 
   export default {
     components: {
       MHeader,
-      Tab
+      Tab,
+      Player
     }
   }
 </script>
@@ -27,6 +32,18 @@
     .tab {
       margin-top: 0.05rem;
       margin-bottom: 0.07rem;
+    }
+
+    .toggle-enter {
+      transform: translateX(100%);
+    }
+
+    .toggle-enter-to {
+      transform: translateX(0);
+    }
+
+    .toggle-enter-active {
+      transition: all 0.3s ease;
     }
   }
 </style>

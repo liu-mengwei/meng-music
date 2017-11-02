@@ -12,7 +12,10 @@
         </ul>
       </li>
     </ul>
-    <div class="shortList-container" @touchstart="onShortListTouchStart" @touchmove.prevent.stop="onShortListTouchMove">
+    <div class="shortList-container"
+         @touchend="onShortListTouchEnd"
+         @touchstart="onShortListTouchStart"
+         @touchmove.prevent.stop="onShortListTouchMove">
       <ul>
         <li :class="{'active':currentIndex === index}" v-for="(title,index) in shortList" :data-index="index">
           {{title}}
@@ -21,6 +24,9 @@
     </div>
     <!--固定标题 优化体验-->
     <div class="fixed-title" v-show="fixedTitle" ref="fixedTitle">{{fixedTitle}}</div>
+    <div class="title-wrapper" v-show="touchTitleShow && touchTitle">
+      <div class="touchTitle">{{touchTitle}}</div>
+    </div>
   </scroll>
 </template>
 
@@ -43,7 +49,9 @@
     data(){
       return {
         scrollY: 0,
-        currentIndex: 0
+        currentIndex: 0,
+        touchTitle: '',
+        touchTitleShow: false
       }
     },
 
@@ -72,6 +80,10 @@
         this.touch.y1 = firstTouch.pageY;
         this.touch.firstIndex = firstIndex;
 
+        //显示大标题
+        this.touchTitleShow = true;
+        this.touchTitle = this.shortList[firstIndex];
+
         //this.$refs.listGroup  这里相当于 $(".listGroup") 区别在于这里是原生dom数组
         this._scrollTo(firstIndex);
       },
@@ -83,12 +95,17 @@
         //偏移量
         let delta = Math.floor((this.touch.y2 - this.touch.y1) / ANCHOR_HEIGHT);
         let index = this.touch.firstIndex + delta;
+        this.touchTitle = this.shortList[index];
+
         this._scrollTo(index);
+      },
+
+      onShortListTouchEnd(e){
+        this.touchTitleShow = false;
       },
 
       //根据newY和heightList算出index
       onScroll(newY){
-        console.log(newY);
         this.scrollY = newY;
       },
 
@@ -131,10 +148,6 @@
       }
     },
 
-    mounted(){
-      console.log('listview已渲染');
-    },
-
     watch: {
       //观察data属性，只有有值了才计算高度
       data(list) {
@@ -158,7 +171,7 @@
           let height2 = this.heightList[i + 1];
 
           let diff = (height2 + newY);
-          if (diff > 0 && diff < getPx(0.32)) {
+          if (diff >= 0 && diff < getPx(0.32)) {
             //translate3d开启gpu硬件加速
             //-(getPx(0.32)-diff)
             this.$refs.fixedTitle.style.transform = `translate3d(0,${diff - getPx(0.32)}px,0)`;
@@ -167,7 +180,6 @@
           }
 
           if ((-newY >= height1 && -newY < height2)) {
-            console.log(this.currentIndex);
             this.currentIndex = i;
             return;
           }
@@ -232,10 +244,24 @@
       @include line-height(0.32rem);
       background-color: #333;
       position: absolute;
-      top: 0;
+      top: -2px;
       font-size: $font-size-small;
       padding-left: 0.2rem;
       width: 100%;
+    }
+
+    .title-wrapper {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 50px;
+      width: 0.8rem;
+      height: 0.8rem;
+      text-align: center;
+      line-height: 0.8rem;
+      background: rgba(100, 100, 100, 0.5);
+      border-radius: 10px;
     }
   }
 

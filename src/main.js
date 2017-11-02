@@ -12,6 +12,7 @@ import App from './App'
 import router from './router/index'
 import fastclick from 'fastclick'
 import VueLazyload from 'vue-lazyload'
+import store from './store/index'
 
 fastclick.attach(document.body);
 Vue.config.productionTip = false;
@@ -27,6 +28,7 @@ Vue.use(VueLazyload, {
 new Vue({
   el: '#app',
   router,
+  store,
   template: '<App/>',
   components: {App}
 });

@@ -1,9 +1,13 @@
 .l {
-  float: left;
+  float: left !important;
 }
 
 .r {
-  float: right;
+  float: right !important;
+}
+
+.disabled {
+  color: gray !important;
 }
 
 @mixin bg-img($url) {
@@ -61,4 +65,5 @@
   left: 50%;
   transform: translateX(-50%);
 }
+
 

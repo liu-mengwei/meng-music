@@ -14,7 +14,11 @@
           <div class="main-top">
             <span class="icon-back" @click="back()"></span>
             <h1 class="song-name" v-html="currentSong.name"></h1>
-            <h2 class="song-singer" v-html="currentSong.singer"></h2>
+            <div class="singer-wrapper">
+              <div class="decorate"></div>
+              <span class="song-singer" v-html="currentSong.singer"></span>
+              <div class="decorate"></div>
+            </div>
           </div>
           <div class="main-middle">
             <!--必须得包一层吗-->
@@ -27,7 +31,10 @@
           </div>
           <div class="main-bottom">
             <div class="operators">
-              <div class="icon icon-sequence"></div>
+              <div class="status-list-container">
+                <status-list ref="statusList"></status-list>
+              </div>
+              <div class="icon" :class="modeCls" @click="openStatusList"></div>
               <div class="icon icon-prev" :class="disabledCls" @click="prev"></div>
               <div class="icon playBtn" :class="[disabledCls,playCls]" @click="togglePlay"></div>
               <div class="icon icon-next" :class="disabledCls" @click="next"></div>
@@ -67,6 +74,7 @@
 </template>
 
 <script type="text/ecmascript-6">
+  import StatusList from 'components/status-list/status-list'
   import {mapGetters, mapMutations} from 'vuex'
   import animations from 'create-keyframe-animation'
   import {getPx, getStyle} from '../../common/js/dom'
@@ -103,6 +111,24 @@
       disabledCls(){
         return this.musicReady ? '' : 'disabled';
       },
+
+      //播放图标样式
+      modeCls(){
+        let mode = 'icon-';
+        switch (this.playMode) {
+          case modeType.sequence:
+            mode += 'sequence';
+            break;
+          case modeType.random:
+            mode += 'random';
+            break;
+          case modeType.loop:
+            mode += 'loop';
+            break;
+        }
+        return mode;
+      },
+
       ...mapGetters(['fullScreen', 'songList', 'currentSong', 'playing', 'playMode', 'currentIndex'])
     },
 
@@ -233,6 +259,11 @@
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
+      },
+
+      //打开播放模式列表
+      openStatusList(){
+        this.$refs.statusList.open();
       },
 
       //计算动画所需要的数值
@@ -380,11 +411,15 @@
         })
       }
 
+    },
+
+    components: {
+      StatusList
     }
   }
 </script>
 
-<style rel="stylesheet/scss" lang="scss">
+<style rel="stylesheet/scss" lang="scss" scoped>
   @import "../../common/scss/variable";
   @import "../../common/scss/mixin";
 
@@ -469,14 +504,25 @@
             @include nowrap();
           }
 
-          .song-singer {
+          .singer-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             max-width: 75%;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
             margin: 0 auto;
-            @include nowrap();
+
+            .decorate {
+              width: 0.2rem;
+              display: inline-block;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            }
+
+            .song-singer {
+              margin: 0 0.05rem;
+              @include nowrap();
+            }
           }
+
         }
 
         .main-middle {
@@ -511,7 +557,7 @@
 
         .main-bottom {
           position: absolute;
-          bottom: 0.4rem;
+          bottom: 0.3rem;
           width: 100%;
 
           .operators {
@@ -523,6 +569,12 @@
             .icon {
               font-size: 0.32rem;
               color: $color-theme;
+            }
+
+            .status-list-container {
+              position: absolute;
+              bottom: 0.65rem;
+              left: 0.33rem;
             }
 
             .playBtn {

@@ -5,7 +5,7 @@
       <li class="list-group" v-for="group in data" ref="listGroup">
         <h1 class="list-group-title">{{group.title}}</h1>
         <ul>
-          <li class="group-item" v-for="item in group.items" @click="selectItem(item)">
+          <li class="group-item" v-for="item in group.items" @click="selectItem(item,$event)">
             <img class="item-avator" v-lazy="item.avatar">
             <span class="item-name">{{item.name}}</span>
           </li>
@@ -32,7 +32,7 @@
 
 <script type="text/ecmascript-6">
   import Scroll from 'base/scroll'
-  import {getData, getPx} from 'common/js/dom'
+  import {getData, getPx, touchFeedBack} from 'common/js/dom'
 
   const ANCHOR_HEIGHT = getPx(0.18);
 
@@ -68,7 +68,8 @@
 
     methods: {
       //选择歌手 只是把歌手信息派发出去
-      selectItem(item){
+      selectItem(item, e){
+        touchFeedBack(e.currentTarget);
         this.$emit('selectItem', item);
       },
 

@@ -27,7 +27,7 @@ var apiRoutes = express.Router()
 
 //请求转发
 apiRoutes.get('/getDiscList', function (req, res) {
-  var url = 'https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg'
+  var url = 'https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg';
   axios.get(url, {
     headers: {
       referer: 'https://c.y.qq.com/',
@@ -39,6 +39,34 @@ apiRoutes.get('/getDiscList', function (req, res) {
   }).catch(function (e) {
     console.log(e);
   })
+});
+
+apiRoutes.get('/getLyric', function (req, res) {
+  var url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg';
+
+  //多加了个y 你说蠢不蠢， 域名要一致啊
+  axios.get(url, {
+    headers: {
+      referer: 'https://c.y.qq.com/',
+      host: 'c.y.qq.com'
+    },
+    params: req.query
+  }).then((response) => {
+    let data = response.data;
+
+    //写一个正则取出json数据  func({'age':24})
+    let reg = /^\w+\(({.+})\)$/;
+    let matches = data.match(reg);
+
+    let ret = '';
+    if (matches) {
+      ret = JSON.parse(matches[1]);
+    }
+    res.json(ret);
+  }).catch(function (e) {
+    console.log(e);
+  })
+
 });
 
 app.use('/api', apiRoutes);

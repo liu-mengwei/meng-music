@@ -20,16 +20,45 @@
               <div class="decorate"></div>
             </div>
           </div>
-          <div class="main-middle">
-            <!--必须得包一层吗-->
-            <!--距离是需要计算出来的 所以必须用js钩子-->
-            <div class="cd-wrapper" ref="cdWrapper">
-              <div class="container" :class="cdCls">
-                <img class="cd-image" :src="currentSong.image">
+          <div class="main-middle"
+               @click="onLyricToggle"
+               @touchend="onLyricSlideEnd"
+               @touchmove="onLyricSlideMove"
+               @touchstart="onLyricSlideStart">
+            <div class="main-middle-l">
+              <!--必须得包一层吗-->
+              <!--距离是需要计算出来的 所以必须用js钩子-->
+              <div class="cd-wrapper" ref="cdWrapper">
+                <div class="container" :class="cdCls">
+                  <img class="cd-image" :src="currentSong.image">
+                </div>
               </div>
+            </div>
+            <!--歌词-->
+            <div class="main-middle-r" ref="mainMiddleR">
+              <scroll class="lyric-wrapper" ref="lyricScroll" :data="currentLyric && currentLyric.lines">
+                <div class="lyric" v-if="currentLyric">
+                  <p class="lyric-line" ref="lyricLines" :class="{'currentLine':index === currentLineNum}"
+                     v-for="(line,index) in currentLyric.lines">{{line.txt}}</p>
+                </div>
+              </scroll>
+            </div>
+            <div class="dots-container">
+              <div class="dot l" :class="{'isActive':showMode === 'cd'}"></div>
+              <div class="dot l" :class="{'isActive':showMode === 'lyric'}"></div>
             </div>
           </div>
           <div class="main-bottom">
+            <div class="progress-container">
+              <progress-bar
+                @progressChange="onProgressChange"
+                ref="progressBar"
+                :currentTime="currentTime"
+                :showTime="true"
+                :height="3"
+                :circleWidth="14">
+              </progress-bar>
+            </div>
             <div class="operators">
               <div class="status-list-container">
                 <status-list ref="statusList"></status-list>
@@ -45,12 +74,20 @@
       </div>
     </transition>
     <!--下面的播放条-->
-    <div class="player-mini" @click.stop="unfold" v-show="!fullScreen && songList.length > 0">
+    <div class="player-mini" @click.stop="unfold" v-show="songList.length > 0">
       <div class="mini-cd" ref="miniCd" :class="cdCls">
         <img class="cd-image" :src="currentSong.image">
       </div>
       <div class="mini-content">
-        <div class="progressBar"></div>
+        <div class="progress-container">
+          <progress-bar
+            @progressChange="onProgressChange"
+            :currentTime="currentTime"
+            :showTime="false"
+            :height="2"
+            :circleWidth="10">
+          </progress-bar>
+        </div>
         <div class="mini-bottom">
           <div class="singer-info">
             <!--为了分开省略号的显示 必须包一层-->
@@ -69,29 +106,50 @@
         </div>
       </div>
     </div>
-    <audio ref="audio" :src="currentSong.url" @canplay="canplay" @error="error"></audio>
+    <audio ref="audio" :src="currentSong.url"
+           @ended="next"
+           @timeupdate="timeupdate"
+           @canplay="canplay"
+           @error="error"></audio>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
   import StatusList from 'components/status-list/status-list'
+  import ProgressBar from 'components/progress-bar/progress-bar'
   import {mapGetters, mapMutations} from 'vuex'
   import animations from 'create-keyframe-animation'
   import {getPx, getStyle} from '../../common/js/dom'
   import $ from 'jquery';
   import {modeType} from '../../store/config'
+  import Lyric from 'lyric-parser'
+  import Scroll from '../../base/scroll.vue'
 
   const transform = getStyle('transform');
   const transition = getStyle('transition');
   const animation = getStyle('animation');
+  const opacity = getStyle('opacity');
 
   export default {
     data(){
       return {
         musicReady: false,
         backStatus: false,
-        beforeIndexArr: []
+        currentTime: 0,
+        beforeIndexArr: [],
+        currentLyric: {}, //当前歌词列表,
+        currentLineNum: 0,
+        showMode: 'cd' //当前是cd 还是歌词
       }
+    },
+
+    created(){
+      this.touch = {initial: false};
+      console.log('player组件创建');
+    },
+
+    mounted(){
+      console.log('player组件渲染');
     },
 
     computed: {
@@ -127,6 +185,10 @@
             break;
         }
         return mode;
+      },
+
+      percent(){
+        return this.currentTime / this.currentSong.duration;
       },
 
       ...mapGetters(['fullScreen', 'songList', 'currentSong', 'playing', 'playMode', 'currentIndex'])
@@ -196,7 +258,30 @@
           return;
         }
 
+        this.currentLyric.togglePlay();
         this.setPlaying(!this.playing);
+      },
+
+      //获取歌词
+      getLyric(){
+        this.currentSong.getLyric().then((res) => {
+          this.currentLyric = new Lyric(res, this.lyricHandle);
+          if (this.musicReady && this.playing) {
+            this.currentLyric.play();
+          }
+        });
+      },
+
+      lyricHandle({lineNum, txt}){
+        this.currentLineNum = lineNum;
+
+        if (lineNum > 6 && this.$refs.lyricScroll) {
+          let ele = this.$refs.lyricLines[lineNum - 6];
+          this.$refs.lyricScroll.scrollToElement(ele, 1000);
+        } else {
+          this.$refs.lyricScroll.scrollTo(0, 0, 1000);
+        }
+
       },
 
       //前一首
@@ -210,9 +295,17 @@
         this.backStatus = true;
 
         let index = -1;
+
+        //单曲循环的优先级更高
+        if (this.playMode === modeType.loop) {
+          this.$refs.audio.load();
+          this.$refs.audio.play();
+          this.musicReady = false;
+          return;
+        }
+
         //如果不存在的话 按照模式播放
         if (this.beforeIndexArr.length <= 0) {
-
           switch (this.playMode) {
             case modeType.sequence:
               //退回最后一首
@@ -221,9 +314,6 @@
               break;
             case modeType.random:
               index = Math.floor(Math.random() * this.songList.length);
-              break;
-            case modeType.loop:
-              index = this.currentIndex;
               break;
           }
 
@@ -234,6 +324,7 @@
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
+        this.this.currentLyric = {};
       },
 
       next(){
@@ -253,17 +344,131 @@
             break;
           case modeType.loop:
             index = this.currentIndex;
+            this.$refs.audio.load();
+            this.$refs.audio.play();
             break;
         }
 
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
+        this.currentLyric = {};
       },
 
       //打开播放模式列表
       openStatusList(){
         this.$refs.statusList.open();
+      },
+
+      //可以播放
+      canplay(){
+        this.musicReady = true;
+      },
+
+      //音乐获取失败
+      error(){
+        this.musicReady = true;
+      },
+
+      //获取时间进度
+      timeupdate(){
+        this.currentTime = this.$refs.audio.currentTime;
+      },
+
+      onProgressChange(percent){
+        this.$refs.audio.currentTime = percent * this.currentSong.duration;
+      },
+
+      //左右滑动歌词实现
+      onLyricSlideStart(e){
+        this.touch.initial = true;
+        this.touch.startX = e.touches[0].pageX;
+        this.touch.startY = e.touches[0].pageY;
+        this.touch.offsetX = 0;
+      },
+
+      onLyricSlideMove(e){
+        if (!this.touch.initial) {
+          return;
+        }
+
+        let offsetX = e.touches[0].pageX - this.touch.startX;
+        let offsetY = e.touches[0].pageY - this.touch.startY;
+
+        if (Math.abs(offsetX) <= Math.abs(offsetY)) {
+          return;
+        }
+
+        //可能是从左往右滑
+        let width = this.showMode === 'cd' ? 0 : -window.innerWidth;
+        let finalWidth = width + offsetX;
+
+        this.$refs.mainMiddleR.style[transition] = '';
+        this.$refs.mainMiddleR.style[transform] = `translate3d(${finalWidth}px,0,0)`;
+
+        //优化措施 在cd的时候往右边滑
+        if (offsetX > 0 && this.showMode === 'cd') {
+          return;
+        }
+
+        this.$refs.cdWrapper.style[opacity] = 1 - Math.abs(finalWidth / window.innerWidth);
+        this.touch.offsetX = finalWidth;
+      },
+
+      onLyricSlideEnd(){
+        let windowWidth = window.innerWidth;
+        let mainMiddleR = this.$refs.mainMiddleR;
+        let ratio = Math.abs(this.touch.offsetX) / windowWidth;
+
+        //竖着滑
+        if (this.touch.offsetX === 0) {
+          return;
+        }
+
+        mainMiddleR.style[transition] = 'all 0.3s ease';
+        if (this.showMode === 'cd') {
+          if (ratio > 0.1 && this.touch.offsetX < 0) {
+            mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
+            this.$refs.cdWrapper.style[opacity] = 0;
+            this.showMode = 'lyric';
+          } else {
+            mainMiddleR.style[transform] = `translate3d(0,0,0)`;
+          }
+        }
+
+        else if (this.showMode === 'lyric') {
+          if (ratio < 0.9) {
+            mainMiddleR.style[transform] = `translate3d(0,0,0)`;
+            this.$refs.cdWrapper.style[opacity] = 1;
+            this.showMode = 'cd';
+          } else {
+            mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
+          }
+        }
+
+        this.slideReset();
+      },
+
+      onLyricToggle(){
+        let cdWrapper = this.$refs.cdWrapper;
+        let mainMiddleR = this.$refs.mainMiddleR;
+        let windowWidth = window.innerWidth;
+
+        mainMiddleR.style[transition] = '';
+        if (this.showMode === 'cd') {
+          cdWrapper.style[opacity] = 0;
+          mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
+          this.showMode = 'lyric';
+        } else {
+          cdWrapper.style[opacity] = 1;
+          mainMiddleR.style[transform] = `translate3d(0,0,0)`;
+          this.showMode = 'cd';
+        }
+      },
+
+      slideReset(){
+        this.touch.initial = false;
+        this.touch.offsetX = 0;
       },
 
       //计算动画所需要的数值
@@ -281,22 +486,6 @@
         let scale = miniWidth / cdWidth;
         return {x: transformX, y: transformY, scale: scale}
       },
-
-      //可以播放
-      canplay(){
-        this.musicReady = true;
-      },
-
-      //音乐获取失败
-      error(){
-        this.musicReady = true;
-      },
-
-      ...mapMutations({
-        'setFullScreen': 'SET_FULLSCREEN',
-        'setPlaying': 'SET_PLAYING',
-        'setCurrentIndex': 'SET_CURRENT_INDEX'
-      }),
 
       //歌曲名是否超过长度 true为超过了长度
       _getminiSongWidth(){
@@ -357,7 +546,13 @@
         animations.unregisterAnimation('step1');
         animations.unregisterAnimation('step2');
         $('.songName-wrapper').css('text-overflow', 'ellipsis');
-      }
+      },
+
+      ...mapMutations({
+        'setFullScreen': 'SET_FULLSCREEN',
+        'setPlaying': 'SET_PLAYING',
+        'setCurrentIndex': 'SET_CURRENT_INDEX'
+      })
     },
 
     watch: {
@@ -366,6 +561,7 @@
           //记录这次播放的歌曲
           this.beforeSong = this.oldVal;
           this.$refs.audio.play();
+          this.getLyric();
 
           let {songWidth, wrapperWidth} = this._getminiSongWidth();
           //切歌后先终止之前的动画
@@ -395,6 +591,12 @@
       fullScreen(fullScreen){
 
         this.$nextTick(() => {
+          this.$refs.lyricScroll.refresh();
+
+          //这句是必加的 原点优化
+          let wholeBarWidth = this.$refs.progressBar.$refs.wholeBar.clientWidth;
+          this.$refs.progressBar.setOffset(this.percent * wholeBarWidth);
+
           //判断歌名是否超过了长度
           let {songWidth, wrapperWidth} = this._getminiSongWidth();
           if (wrapperWidth >= songWidth) {
@@ -409,12 +611,20 @@
             this._endShowMoreAnimation();
           }
         })
-      }
+      },
 
+      //播放歌词逻辑
+      musicReady(newVal){
+        if (newVal && this.playing && this.currentLyric.lines) {
+          this.currentLyric.play();
+        }
+      }
     },
 
     components: {
-      StatusList
+      StatusList,
+      ProgressBar,
+      Scroll
     }
   }
 </script>
@@ -465,7 +675,7 @@
       top: 0;
       bottom: 0;
       background: #333;
-      z-index: 100;
+      z-index: 200;
 
       .bg-image {
         width: 100%;
@@ -526,30 +736,93 @@
         }
 
         .main-middle {
-          /*等比例*/
-          width: 100%;
-          padding-top: 80%;
-          position: relative;
+          white-space: nowrap;
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 1.5rem;
+          top: 0.95rem;
+          overflow: hidden;
+          font-size: 0;
 
-          .cd-wrapper {
-            position: absolute;
-            width: 80%;
-            height: 100%;
-            margin: 0 auto;
-            top: 0;
-            left: 0;
-            right: 0;
-            border-radius: 50%;
-            border: 10px solid hsla(0, 0%, 100%, .1);
-            overflow: hidden;
+          .main-middle-l {
+            /*等比例*/
+            width: 100%;
+            padding-top: 80%;
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
 
-            .container {
+            .cd-wrapper {
+              position: absolute;
+              width: 80%;
+              height: 100%;
+              margin: 0 auto;
+              top: 0;
+              left: 0;
+              right: 0;
               border-radius: 50%;
+              border: 10px solid hsla(0, 0%, 100%, .1);
               overflow: hidden;
+              transition: all 0.3s ease;
 
-              .cd-image {
-                width: 100%;
-                height: 100%;
+              .container {
+                border-radius: 50%;
+                overflow: hidden;
+
+                .cd-image {
+                  width: 100%;
+                  height: 100%;
+                }
+              }
+            }
+          }
+
+          .main-middle-r {
+            overflow: hidden;
+            width: 100%;
+            height: 90%;
+            text-align: center;
+            display: inline-block;
+            vertical-align: top;
+
+            .lyric-wrapper {
+              color: $color-text-ll;
+              font-size: $font-size-medium-x;
+              width: 80%;
+              height: 100%;
+              letter-spacing: 0.01rem;
+              margin: 0 auto;
+
+              .lyric {
+                .lyric-line {
+                  margin: 0.15rem 0;
+
+                  &.currentLine {
+                    color: $color-theme;
+                  }
+                }
+              }
+            }
+          }
+
+          .dots-container {
+            position: absolute;
+            bottom: 0;
+            @include hor-center();
+
+            .dot {
+              @include square(0.09rem);
+              border-radius: 50%;
+              background: #fff;
+              opacity: 0.4;
+
+              &:last-child {
+                margin-left: 0.1rem;
+              }
+
+              &.isActive {
+                opacity: 1;
               }
             }
           }
@@ -560,11 +833,16 @@
           bottom: 0.3rem;
           width: 100%;
 
+          .progress-container {
+            padding: 0 0.2rem;
+          }
+
           .operators {
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 0 0.35rem;
+            padding: 0 0.15rem;
+            margin-top: 0.15rem;
 
             .icon {
               font-size: 0.32rem;
@@ -590,14 +868,14 @@
       bottom: 0;
       width: 100%;
       background: #333;
-      height: 0.6rem;
+      height: 0.65rem;
       z-index: 100;
       display: flex;
       box-shadow: 0 -2px 2px 3px rgba(17, 21, 25, 0.4);
 
       .mini-cd {
-        width: 0.6rem;
-        height: 0.6rem;
+        width: 0.65rem;
+        height: 0.65rem;
         border-radius: 50%;
         overflow: hidden;
         border: 3px solid rgba(31, 27, 27, 0.8);
@@ -617,8 +895,9 @@
         margin-left: 0.2rem;
         flex: 1 1 auto;
 
-        .progressBar {
-          margin-bottom: 0.15rem;
+        .progress-container {
+          margin: 0.06rem 0 0.1rem;
+          padding-right: 0.15rem;
         }
 
         .mini-bottom {

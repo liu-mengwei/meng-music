@@ -29,6 +29,7 @@ module.exports = {
     'no-multiple-empty-lines': [0, {"max": 2}],
     'padded-blocks': 0, //块语句内行首行尾是否要空行,
     'no-unused-vars': 0,
-    'space-before-function-paren': 0
+    'space-before-function-paren': 0,
+    'brace-style': 0
   }
 };

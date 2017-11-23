@@ -23,7 +23,12 @@
     },
 
     created(){
+      console.log('singer-detail组件创建');
       this._getSingerDetail();
+    },
+
+    mounted(){
+      console.log('singer-detail组件渲染');
     },
 
     methods: {
@@ -57,7 +62,6 @@
     components: {
       MusicList
     }
-
   }
 </script>
 

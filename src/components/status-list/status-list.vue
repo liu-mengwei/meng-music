@@ -30,6 +30,10 @@
       }
     },
 
+    created(){
+      console.log('status-list创建');
+    },
+
     mounted(){
       console.log('status-list渲染');
       this.$nextTick(() => {

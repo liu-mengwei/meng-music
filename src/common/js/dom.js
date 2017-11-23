@@ -1,11 +1,7 @@
 // 通用dom 封装
 export function addClass(el, className) {
   if (!hasClass(el, className)) {
-    if (el.className) {
-      el.className += className;
-    } else {
-      el.className += ' ' + className;
-    }
+    el.className += ' ' + className;
   }
 }
 
@@ -13,6 +9,14 @@ export function hasClass(el, className) {
   var reg = new RegExp('(^|\\s)' + className + '($|\\s)');
   return reg.test(el.className);
 }
+
+export function removeClass(el, className) {
+  if (hasClass(el, className)) {
+    var reg = new RegExp('(^|\\s)' + className + '($|\\s)');
+    el.className = el.className.replace(reg, '');
+  }
+}
+
 
 export function getData(el, name, val) {
   const prefix = 'data-';
@@ -64,4 +68,24 @@ export function getStyle(style) {
   } else {
     return style;
   }
+}
+
+//触摸反馈
+export function touchFeedBack(target) {
+  target.style.background = 'rgba(100, 100, 100, 0.3)';
+  target.style.transition = 'all 0.2s ease';
+
+  setTimeout(() => {
+    target.style.background = '';
+  }, 200);
+}
+
+//时间补0,默认补两位
+export function pad(time, n = 2) {
+  time = time.toString();
+  let i = time.length;
+  while (i++ < n) {
+    time = '0' + time;
+  }
+  return time;
 }

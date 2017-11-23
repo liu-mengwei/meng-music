@@ -9,7 +9,6 @@ const actions = {
     console.log('songList', songList);
     commit(types.SET_SONG_LIST, songList);
     commit(types.SET_CURRENT_INDEX, index);
-    commit(types.SET_FULLSCREEN, true);
     commit(types.SET_PLAYING, true);
   }
 };

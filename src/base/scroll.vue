@@ -49,6 +49,10 @@
         this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments);
       },
 
+      scrollTo(){
+        this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments);
+      },
+
       _initScroll(){
         let options = {probeType: this.probeType, click: this.click};
         this.scroll = new BScroll(this.$refs.scrollWrapper, options);
@@ -65,8 +69,6 @@
     watch: {
       //监视当数据改变时，自动调用refresh方法
       data(){
-        console.log('数据来了');
-
         //必须等待dom更新 才能刷新scroll
         setTimeout(() => {
           this.refresh();

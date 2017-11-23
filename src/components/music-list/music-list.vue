@@ -7,9 +7,13 @@
       <div class="filter" :style="getBgImage" ref="filter">
       </div>
       <div class="back"></div>
-      <div class="play-container" v-show="songList.length>0" ref="playContainer">
+      <div class="play-container" v-show="songList.length>0" ref="playContainer"
+           @touchstart="onPlayAllStart"
+           @touchend="onPlayAllEnd">
         <span class="icon-play"></span>
-        <span class="play-title">随机播放全部</span>
+        <span class="play-title">
+          {{modeType}}播放全部
+        </span>
       </div>
     </div>
     <!--给外层设置高度-->
@@ -30,8 +34,11 @@
 <script type="text/ecmascript-6">
   import SongList from 'components/song-list/song-list'
   import Scroll from 'base/scroll'
-  import {getStyle} from 'common/js/dom'
+  import {getStyle, addClass, removeClass} from 'common/js/dom'
   import Loading from 'base/loading'
+  import {mapGetters, mapActions} from 'vuex'
+  import {modeType} from '../../store/config'
+
 
   const titleHeight = 42;
 
@@ -59,11 +66,21 @@
       }
     },
 
+    created(){
+      console.log('music-list组件创建');
+    },
+
     computed: {
       getBgImage(){
         console.log('this.bgImage' + this.bgImage);
         return `background-image: url(${this.bgImage})`
-      }
+      },
+
+      modeType(){
+        return this.playMode === modeType.sequence ? '顺序' : '随机';
+      },
+
+      ...mapGetters(['playMode'])
     },
 
     methods: {
@@ -102,10 +119,31 @@
         }
 
         this.$refs.bgLayer.style.transform = `translate3d(0,${pos}px,0)`;
-      }
+      },
+      onPlayAllStart(){
+        addClass(this.$refs.playContainer, 'active');
+      },
+
+      onPlayAllEnd(){
+        removeClass(this.$refs.playContainer, 'active');
+        let index = -1;
+        if (this.playMode === modeType.sequence) {
+          index = 0;
+        } else {
+          index = Math.floor(Math.random() * this.songList.length);
+        }
+
+        this.setPlayList({songList: this.songList, index});
+      },
+
+      ...mapActions([
+        'setPlayList'
+      ])
     },
 
     mounted(){
+      console.log('music-list组件渲染');
+
       this.imageHeight = this.$refs.filter.clientHeight;
       this.$refs.list.$el.style.top = `${this.imageHeight}px`;
       this.$refs.bgLayer.style.top = `${this.imageHeight}px`;
@@ -186,6 +224,19 @@
         right: 0;
         width: 1.25rem;
         margin: 0 auto;
+        transition: all 0.3s ease;
+
+        &.active {
+          background: $color-theme;
+
+          .icon-play {
+            color: #fff;
+          }
+
+          .play-title {
+            color: #fff;
+          }
+        }
 
         .icon-play {
           color: $color-theme;
@@ -194,6 +245,7 @@
 
         .play-title {
           color: $color-theme;
+
         }
       }
     }
@@ -213,7 +265,6 @@
       right: 0;
 
       .songs-list-container {
-        padding: 0.1rem 0.32rem;
       }
 
       .loading-container {

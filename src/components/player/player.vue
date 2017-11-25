@@ -37,9 +37,14 @@
             <!--歌词-->
             <div class="main-middle-r" ref="mainMiddleR">
               <scroll class="lyric-wrapper" ref="lyricScroll" :data="currentLyric && currentLyric.lines">
-                <div class="lyric" v-if="currentLyric">
-                  <p class="lyric-line" ref="lyricLines" :class="{'currentLine':index === currentLineNum}"
-                     v-for="(line,index) in currentLyric.lines">{{line.txt}}</p>
+                <div class="lyric">
+                  <!--上面的lyric是必须要有的，scroll初始化要用到 但下面的v-for的优先级比v-if更高，所以只能再包一层-->
+                  <div v-if="currentLyric">
+                    <p class="lyric-line" ref="lyricLines"
+                       :class="{'currentLine':index === currentLineNum}"
+                       v-for="(line,index) in currentLyric.lines">{{line.txt}}
+                    </p>
+                  </div>
                 </div>
               </scroll>
             </div>
@@ -137,8 +142,8 @@
         backStatus: false,
         currentTime: 0,
         beforeIndexArr: [],
-        currentLyric: {}, //当前歌词列表,
-        currentLineNum: 0,
+        currentLyric: null, //当前歌词列表,
+        currentLineNum: -1,
         showMode: 'cd' //当前是cd 还是歌词
       }
     },
@@ -258,30 +263,49 @@
           return;
         }
 
-        this.currentLyric.togglePlay();
+        if (this.currentLyric) {
+          this.currentLyric.togglePlay();
+        }
+
         this.setPlaying(!this.playing);
       },
 
       //获取歌词
       getLyric(){
+        //先清理之前歌词的定时器
+        if (this.currentLyric) {
+          this.currentLyric.stop();
+        }
+
         this.currentSong.getLyric().then((res) => {
           this.currentLyric = new Lyric(res, this.lyricHandle);
           if (this.musicReady && this.playing) {
             this.currentLyric.play();
           }
+          //优化操作 歌词要重置
+        }).catch(() => {
+          console.log('出错');
+          this.currentLyric = null;
+          this.currentLineNum = -1;
         });
       },
 
       lyricHandle({lineNum, txt}){
         this.currentLineNum = lineNum;
+        this.scrollToEle(lineNum, 1000);
+      },
 
-        if (lineNum > 6 && this.$refs.lyricScroll) {
-          let ele = this.$refs.lyricLines[lineNum - 6];
-          this.$refs.lyricScroll.scrollToElement(ele, 1000);
-        } else {
-          this.$refs.lyricScroll.scrollTo(0, 0, 1000);
+      //歌词滚动
+      scrollToEle(lineNum, time){
+        if (lineNum < 0 || !this.$refs.lyricScroll) {
+          return;
         }
 
+        if (lineNum > 6) {
+          this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLines[lineNum - 6], time);
+        } else {
+          this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLines[0], time);
+        }
       },
 
       //前一首
@@ -324,7 +348,7 @@
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
-        this.this.currentLyric = {};
+        this.lyricReset();
       },
 
       next(){
@@ -346,13 +370,23 @@
             index = this.currentIndex;
             this.$refs.audio.load();
             this.$refs.audio.play();
-            break;
+            if (this.currentLyric) {
+              this.currentLyric.seek(0);
+            }
+            return;
         }
 
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
-        this.currentLyric = {};
+        this.lyricReset();
+      },
+
+      lyricReset(){
+        if (this.currentLyric) {
+          this.currentLyric.stop();
+        }
+        this.currentLyric = null;
       },
 
       //打开播放模式列表
@@ -376,7 +410,17 @@
       },
 
       onProgressChange(percent){
-        this.$refs.audio.currentTime = percent * this.currentSong.duration;
+        let time = percent * this.currentSong.duration
+        this.$refs.audio.currentTime = time;
+
+        if (this.currentLyric) {
+          this.currentLyric.seek(time * 1000);
+
+          //修复暂停又开始播放的bug
+          if (!this.playing) {
+            this.currentLyric.pause();
+          }
+        }
       },
 
       //左右滑动歌词实现
@@ -385,6 +429,7 @@
         this.touch.startX = e.touches[0].pageX;
         this.touch.startY = e.touches[0].pageY;
         this.touch.offsetX = 0;
+        this.touch.moveArr = []; //优化用的
       },
 
       onLyricSlideMove(e){
@@ -399,50 +444,61 @@
           return;
         }
 
+        //优化措施 在cd的时候往右边滑
+        if (offsetX > 0 && this.showMode === 'cd') {
+          return;
+        }
+
         //可能是从左往右滑
         let width = this.showMode === 'cd' ? 0 : -window.innerWidth;
         let finalWidth = width + offsetX;
 
         this.$refs.mainMiddleR.style[transition] = '';
         this.$refs.mainMiddleR.style[transform] = `translate3d(${finalWidth}px,0,0)`;
-
-        //优化措施 在cd的时候往右边滑
-        if (offsetX > 0 && this.showMode === 'cd') {
-          return;
-        }
-
         this.$refs.cdWrapper.style[opacity] = 1 - Math.abs(finalWidth / window.innerWidth);
         this.touch.offsetX = finalWidth;
+
+        // 优化措施 例如用户先往左滑 再往右滑 存下上次滑动的值
+        if (this.touch.moveArr.length === 2) {
+          this.touch.moveArr.splice(0, 1, this.touch.moveArr[1]);
+          this.touch.moveArr.splice(1, 1, e.touches[0].pageX);
+        } else {
+          this.touch.moveArr.push(e.touches[0].pageX);
+        }
       },
 
-      onLyricSlideEnd(){
-        let windowWidth = window.innerWidth;
-        let mainMiddleR = this.$refs.mainMiddleR;
-        let ratio = Math.abs(this.touch.offsetX) / windowWidth;
-
+      onLyricSlideEnd(e){
         //竖着滑
         if (this.touch.offsetX === 0) {
           return;
         }
 
+        let windowWidth = window.innerWidth;
+        let mainMiddleR = this.$refs.mainMiddleR;
+        let cdWrapper = this.$refs.cdWrapper;
+        let ratio = Math.abs(this.touch.offsetX) / windowWidth;
+
         mainMiddleR.style[transition] = 'all 0.3s ease';
+
         if (this.showMode === 'cd') {
-          if (ratio > 0.1 && this.touch.offsetX < 0) {
+          if (ratio > 0.1 && this.touch.offsetX < 0 && this.touch.moveArr[1] < this.touch.moveArr[0]) {
             mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
-            this.$refs.cdWrapper.style[opacity] = 0;
+            cdWrapper.style[opacity] = 0;
             this.showMode = 'lyric';
           } else {
             mainMiddleR.style[transform] = `translate3d(0,0,0)`;
+            cdWrapper.style[opacity] = 1;
           }
         }
 
         else if (this.showMode === 'lyric') {
-          if (ratio < 0.9) {
+          if (ratio < 0.9 && this.touch.moveArr[1] > this.touch.moveArr[0]) {
             mainMiddleR.style[transform] = `translate3d(0,0,0)`;
-            this.$refs.cdWrapper.style[opacity] = 1;
+            cdWrapper.style[opacity] = 1;
             this.showMode = 'cd';
           } else {
             mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
+            cdWrapper.style[opacity] = 0;
           }
         }
 
@@ -469,6 +525,7 @@
       slideReset(){
         this.touch.initial = false;
         this.touch.offsetX = 0;
+        this.touch.moveArr = [];
       },
 
       //计算动画所需要的数值
@@ -593,6 +650,9 @@
         this.$nextTick(() => {
           this.$refs.lyricScroll.refresh();
 
+          //优化切换时歌词显示
+          this.scrollToEle(this.currentLineNum, 0);
+
           //这句是必加的 原点优化
           let wholeBarWidth = this.$refs.progressBar.$refs.wholeBar.clientWidth;
           this.$refs.progressBar.setOffset(this.percent * wholeBarWidth);
@@ -615,7 +675,7 @@
 
       //播放歌词逻辑
       musicReady(newVal){
-        if (newVal && this.playing && this.currentLyric.lines) {
+        if (newVal && this.playing && this.currentLyric) {
           this.currentLyric.play();
         }
       }
@@ -795,6 +855,7 @@
               margin: 0 auto;
 
               .lyric {
+                white-space: normal;
                 .lyric-line {
                   margin: 0.15rem 0;
 
@@ -878,7 +939,7 @@
         height: 0.65rem;
         border-radius: 50%;
         overflow: hidden;
-        border: 3px solid rgba(31, 27, 27, 0.8);
+        border: 3px solid rgb(31, 27, 27);
         position: relative;
         bottom: 0.13rem;
         left: 0.1rem;

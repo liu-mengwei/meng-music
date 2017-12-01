@@ -45,12 +45,24 @@
         this.scroll && this.scroll.refresh();
       },
 
+      disable(){
+        this.scroll && this.scroll.disable();
+      },
+
+      enable(){
+        this.scroll && this.scroll.enable();
+      },
+
       scrollToElement(){
         this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments);
       },
 
       scrollTo(){
-        this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments);
+        this.scroll && this.scroll.scrollTo.apply(this.scroll, arguments);
+      },
+
+      scrollBy(){
+        this.scroll && this.scroll.scrollBy.apply(this.scroll, arguments);
       },
 
       _initScroll(){

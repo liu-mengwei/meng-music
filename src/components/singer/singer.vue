@@ -1,6 +1,6 @@
 <template>
-  <div class="singer-wrapper">
-    <listview class="singer" :data="singerList" @selectItem="selectSinger"></listview>
+  <div class="singer-wrapper" ref="singerWrapper">
+    <listview class="singer" :data="singerList" @selectItem="selectSinger" ref="listview"></listview>
     <router-view></router-view>
   </div>
 </template>
@@ -12,11 +12,13 @@
   import SingerDetail from '../singer-detail/singer-detail'
   import router from '../../router/index'
   import {mapMutations} from 'vuex'
+  import {miniPlayMixin} from 'common/js/mixin'
 
   const HOT_NAME = '热门';
   const HOT_LENTH = 10;
 
   export default {
+    mixins: [miniPlayMixin],
     data() {
       return {
         singerList: []
@@ -28,6 +30,13 @@
     },
 
     methods: {
+      handleMiniPlay(){
+        if (this.playList.length > 0) {
+          this.$refs.singerWrapper.style['bottom'] = '0.7rem';
+          this.$refs.listview.refresh();
+        }
+      },
+
       //监听选择歌手的事件
       selectSinger(singer) {
         router.push(`/singer/${singer.id}`);

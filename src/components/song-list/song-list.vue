@@ -8,7 +8,7 @@
       <i class="musicSign fa fa-music"></i>
       <div class="content-wrapper">
         <h1 class="song-name">{{item.name}}</h1>
-        <span class="song-singer">{{item.singer}} -《{{item.album}}》</span>
+        <span class="song-singer" v-text="songSingerTxt(item)"></span>
       </div>
     </li>
   </ul>
@@ -40,6 +40,17 @@
           this._startRollDown($(e.currentTarget).children('.musicSign'));
           this.setPlayList({songList: this.songList, index});
         }
+      },
+
+      songSingerTxt(item){
+        let ret = '';
+        if (item.singer) {
+          ret += item.singer + ' ';
+        }
+        if (item.album && item.album.trim() !== '') {
+          ret += ` -《${item.album}》`;
+        }
+        return ret;
       },
 
       _startRollDown(el){

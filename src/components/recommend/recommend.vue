@@ -1,6 +1,6 @@
 <template>
-  <div class="recommend">
-    <scroll class="recommend-content" :data="discList">
+  <div class="recommend" ref="recommend">
+    <scroll class="recommend-content" :data="discList" ref="recommendContent">
       <!--必须要有这个内部容器-->
       <div>
         <!--这里为什么需要一个container 因为我觉得控制padding margin应该交由父组件控制-->
@@ -14,11 +14,11 @@
         <div class="recommend-title">热门歌单推荐</div>
         <div class="list-container">
           <ul>
-            <li class="disc-item" v-for="item in discList">
+            <li class="disc-item" v-for="item in discList" @click="selectDisc(item,$event)">
               <img v-lazy="item.imgurl" class="disc-img">
               <div class="disc-wrapper">
-                <h1 class="disc-title">{{item.creator.name}}</h1>
-                <div class="disc-desc">{{item.dissname}}</div>
+                <h1 class="disc-title">{{item.dissname}}</h1>
+                <div class="disc-desc">{{item.creator.name}}</div>
               </div>
             </li>
           </ul>
@@ -28,6 +28,7 @@
         <loading v-show="discList.length == 0"></loading>
       </div>
     </scroll>
+    <router-view></router-view>
   </div>
 </template>
 
@@ -37,8 +38,12 @@
   import Slider from 'base/slider'
   import Scroll from 'base/scroll'
   import Loading from 'base/loading'
+  import {miniPlayMixin} from '../../common/js/mixin'
+  import {mapMutations} from 'vuex'
+  import {touchFeedBack} from 'common/js/dom'
 
   export default {
+    mixins: [miniPlayMixin],
     data() {
       return {
         //jsonp 获取到的数据
@@ -66,6 +71,19 @@
     },
 
     methods: {
+      handleMiniPlay(){
+        if (this.playList.length > 0) {
+          this.$refs.recommend.style['bottom'] = '0.7rem';
+          this.$refs.recommendContent.refresh()
+        }
+      },
+
+      selectDisc(item, e){
+        touchFeedBack(e.currentTarget);
+        this.setDisc(item);
+        this.$router.push(`recommend/${item.dissid}`);
+      },
+
       //请求接口
       _getRecommend() {
         var self = this;
@@ -89,7 +107,9 @@
       _setSliderContainerWidth(){
         let sliderContainer = this.$refs.sliderContainer;
         sliderContainer.style.height = sliderContainer.clientWidth / SLIDER_RATIO + 'px';
-      }
+      },
+
+      ...mapMutations({'setDisc': 'SET_DISC'})
     },
 
     components: {
@@ -119,20 +139,19 @@
 
       .recommend-title {
         text-align: center;
-        padding: 0.25rem 0 0.15rem 0;
+        padding: 0.25rem 0 0.08rem 0;
         color: $color-theme;
       }
 
       .list-container {
         margin-top: 0.1rem;
-        padding: 0 0.2rem;
         position: relative;
 
         ul {
           .disc-item {
+            padding: 0.12rem 0.2rem;
             display: flex;
             align-content: center;
-            margin-bottom: 0.25rem;
 
             .disc-img {
               width: 0.6rem;

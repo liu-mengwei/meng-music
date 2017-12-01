@@ -20,8 +20,8 @@ const mutations = {
     state.playMode = playMode;
   },
 
-  [types.SET_SONG_LIST](state, songList){
-    state.songList = songList;
+  [types.SET_PLAY_LIST](state, songList){
+    state.playList = songList;
   },
 
   [types.SET_SEQUENCE_LIST](state, sequenceList){
@@ -30,6 +30,10 @@ const mutations = {
 
   [types.SET_CURRENT_INDEX](state, index){
     state.currentIndex = index;
+  },
+
+  [types.SET_DISC](state, disc){
+    state.disc = disc;
   }
 };
 

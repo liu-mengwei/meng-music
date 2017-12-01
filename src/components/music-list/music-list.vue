@@ -1,6 +1,11 @@
 <template>
   <div class="music-list">
-    <h1 class="title" v-html="title"></h1>
+    <div class="title-wrapper">
+      <!--hack方法 否则如果不包的话 省略号显示不出来-->
+      <div id="musicList-title-container" class="title-container">
+        <span id="musicList-title" class="title" v-html="title"></span>
+      </div>
+    </div>
     <span class="icon-back" @click="goBack()"></span>
     <div class="bg-image" ref="bgImage">
       <!--遮罩层-->
@@ -12,7 +17,7 @@
            @touchend="onPlayAllEnd">
         <span class="icon-play"></span>
         <span class="play-title">
-          {{modeType}}播放全部
+          {{modeType}}播放全部<sub class="songList-num">/{{songList.length}}</sub>
         </span>
       </div>
     </div>
@@ -38,11 +43,14 @@
   import Loading from 'base/loading'
   import {mapGetters, mapActions} from 'vuex'
   import {modeType} from '../../store/config'
+  import {miniPlayMixin, showMoreMixin} from '../../common/js/mixin'
+  import $ from 'jquery'
 
 
   const titleHeight = 42;
 
   export default {
+    mixins: [miniPlayMixin, showMoreMixin],
     props: {
       title: {
         type: String,
@@ -70,6 +78,28 @@
       console.log('music-list组件创建');
     },
 
+    mounted(){
+      console.log('music-list组件渲染');
+
+      this.imageHeight = this.$refs.filter.clientHeight;
+      this.$refs.list.$el.style.top = `${this.imageHeight}px`;
+      this.$refs.bgLayer.style.top = `${this.imageHeight}px`;
+
+      this.$nextTick(() => {
+        let el = this.getWrapperAndContent();
+        this.startShowMoreAnimation(el);
+      });
+    },
+
+    beforeDestroy(){
+      console.log('music-list销毁');
+    },
+
+    destroyed(){
+      console.log('music-list销毁');
+      this.endShowMoreAnimation();
+    },
+
     computed: {
       getBgImage(){
         console.log('this.bgImage' + this.bgImage);
@@ -84,9 +114,16 @@
     },
 
     methods: {
-      goBack(){
-        window.history.go(-1);
+      getWrapperAndContent(){
+        let contentEl = $('#musicList-title');
+        let wrapperEl = $('#musicList-title-container');
+        return {contentEl, wrapperEl};
       },
+
+      goBack(){
+        this.$router.go(-1);
+      },
+
       scroll(pos){
         let style = getStyle('transform');
 
@@ -120,6 +157,7 @@
 
         this.$refs.bgLayer.style.transform = `translate3d(0,${pos}px,0)`;
       },
+
       onPlayAllStart(){
         addClass(this.$refs.playContainer, 'active');
       },
@@ -136,17 +174,16 @@
         this.setPlayList({songList: this.songList, index});
       },
 
+      handleMiniPlay(){
+        if (this.playList.length > 0) {
+          this.$refs.list.$el.style['bottom'] = '0.7rem';
+          this.$refs.list.refresh()
+        }
+      },
+
       ...mapActions([
         'setPlayList'
       ])
-    },
-
-    mounted(){
-      console.log('music-list组件渲染');
-
-      this.imageHeight = this.$refs.filter.clientHeight;
-      this.$refs.list.$el.style.top = `${this.imageHeight}px`;
-      this.$refs.bgLayer.style.top = `${this.imageHeight}px`;
     },
 
     components: {
@@ -162,6 +199,7 @@
 <style rel="stylesheet/scss" lang="scss" scoped>
   @import "../../common/scss/variable";
   @import "../../common/scss/icon.css";
+  @import "../../common/scss/mixin";
 
   .music-list {
     position: fixed;
@@ -172,15 +210,31 @@
     z-index: 100;
     background: $color-background;
 
-    .title {
+    .title-wrapper {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      text-align: center;
-      font-size: $font-size-large;
-      padding: 0.12rem 0;
+      width: 75%;
+      margin: 0.12rem auto;
       z-index: 20;
+      display: flex;
+
+      /*todo
+      *1.不设置flex无法超出父元素
+      *2.inline不能设置transform属性
+      *3.设置flex布局，不包一层container无法出现省略号 这里tm有三个坑*/
+      .title-container {
+        text-align: center;
+        width: 100%;
+        @include nowrap();
+
+        .title {
+          display: inline-block;
+          text-align: center;
+          font-size: $font-size-large;
+        }
+      }
     }
 
     .icon-back {
@@ -246,6 +300,9 @@
         .play-title {
           color: $color-theme;
 
+          .songList-num {
+            vertical-align: text-bottom;
+          }
         }
       }
     }

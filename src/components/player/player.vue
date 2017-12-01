@@ -7,7 +7,7 @@
                 @after-enter="afterEnter"
                 @leave="leave"
                 @after-leave="afterLeave">
-      <div class="player-main" v-show="songList.length > 0 && fullScreen">
+      <div class="player-main" v-show="playList.length > 0 && fullScreen">
         <div class="bg-image" :style="getBgImage"></div>
         <!--不能写在里头 要不然就给滤掉了-->
         <div class="main-content">
@@ -25,18 +25,26 @@
                @touchend="onLyricSlideEnd"
                @touchmove="onLyricSlideMove"
                @touchstart="onLyricSlideStart">
-            <div class="main-middle-l">
+            <div class="main-middle-l" ref="mainMiddleL">
               <!--必须得包一层吗-->
               <!--距离是需要计算出来的 所以必须用js钩子-->
-              <div class="cd-wrapper" ref="cdWrapper">
-                <div class="container" :class="cdCls">
-                  <img class="cd-image" :src="currentSong.image">
+              <div class="cd-container">
+                <div class="cd-wrapper" ref="cdWrapper">
+                  <div class="container" :class="cdCls">
+                    <img class="cd-instead" src="./cd.png">
+                    <img class="cd-image" :src="currentSong.image">
+                  </div>
                 </div>
+              </div>
+              <div class="currentLyric-wrapper">
+                <p class="first-line" :class="firstLineCls">{{firstLine}}</p>
+                <p class="second-line" :class="secondLineCls">{{secondLine}}</p>
               </div>
             </div>
             <!--歌词-->
             <div class="main-middle-r" ref="mainMiddleR">
-              <scroll class="lyric-wrapper" ref="lyricScroll" :data="currentLyric && currentLyric.lines">
+              <scroll id="lyric-wrapper" class="lyric-wrapper" ref="lyricScroll"
+                      :data="currentLyric && currentLyric.lines">
                 <div class="lyric">
                   <!--上面的lyric是必须要有的，scroll初始化要用到 但下面的v-for的优先级比v-if更高，所以只能再包一层-->
                   <div v-if="currentLyric">
@@ -79,8 +87,9 @@
       </div>
     </transition>
     <!--下面的播放条-->
-    <div class="player-mini" @click.stop="unfold" v-show="songList.length > 0">
+    <div class="player-mini" @click.stop="unfold" v-show="playList.length > 0">
       <div class="mini-cd" ref="miniCd" :class="cdCls">
+        <img class="cd-instead" src="./cd.png">
         <img class="cd-image" :src="currentSong.image">
       </div>
       <div class="mini-content">
@@ -129,6 +138,7 @@
   import {modeType} from '../../store/config'
   import Lyric from 'lyric-parser'
   import Scroll from '../../base/scroll.vue'
+  import {showMoreMixin} from '../../common/js/mixin'
 
   const transform = getStyle('transform');
   const transition = getStyle('transition');
@@ -136,6 +146,7 @@
   const opacity = getStyle('opacity');
 
   export default {
+    mixins: [showMoreMixin],
     data(){
       return {
         musicReady: false,
@@ -144,7 +155,8 @@
         beforeIndexArr: [],
         currentLyric: null, //当前歌词列表,
         currentLineNum: -1,
-        showMode: 'cd' //当前是cd 还是歌词
+        showMode: 'cd', //当前是cd 还是歌词
+        canAutoScroll: true
       }
     },
 
@@ -160,6 +172,49 @@
     computed: {
       getBgImage(){
         return `background-image:url(${this.currentSong.image})`
+      },
+
+      //cd 下面的歌词
+      firstLine(){
+        if (!this.currentLyric || this.currentLyric.lines.length === 0 || this.currentLineNum === -1) {
+          return '';
+        }
+
+        //如果是偶数
+        if (this.currentLineNum % 2 === 0) {
+          return this.currentLyric.lines[this.currentLineNum].txt;
+        } else {
+          return this.currentLineNum + 1 >= this.currentLyric.lines.length
+            ? '' : this.currentLyric.lines[this.currentLineNum + 1].txt;
+        }
+      },
+
+      secondLine(){
+        if (!this.currentLyric || this.currentLyric.lines.length === 0 || this.currentLineNum === -1) {
+          return '';
+        }
+
+        //如果是奇数
+        if (this.currentLineNum % 2 === 1) {
+          return this.currentLyric.lines[this.currentLineNum].txt;
+        } else {
+          return this.currentLineNum + 1 >= this.currentLyric.lines.length
+            ? '' : this.currentLyric.lines[this.currentLineNum + 1].txt;
+        }
+      },
+
+      firstLineCls(){
+        if (this.currentLineNum === -1) {
+          return '';
+        }
+        return this.currentLineNum % 2 === 0 ? 'isActive' : '';
+      },
+
+      secondLineCls(){
+        if (this.currentLineNum === -1) {
+          return '';
+        }
+        return this.currentLineNum % 2 === 1 ? 'isActive' : '';
       },
 
       //播放图表样式
@@ -196,7 +251,7 @@
         return this.currentTime / this.currentSong.duration;
       },
 
-      ...mapGetters(['fullScreen', 'songList', 'currentSong', 'playing', 'playMode', 'currentIndex'])
+      ...mapGetters(['fullScreen', 'playList', 'currentSong', 'playing', 'playMode', 'currentIndex'])
     },
 
     methods: {
@@ -235,7 +290,7 @@
           }
         });
 
-        animations.runAnimation(this.$refs.cdWrapper, 'move', done);
+        animations.runAnimation($('.cd-wrapper')[0], 'move', done);
       },
 
       afterEnter(){
@@ -244,17 +299,19 @@
 
       leave(el, done){
         const {x, y, scale} = this._getPos();
+        let cdWrapperEl = $('.cd-wrapper')[0];
 
         //兼容性处理
-        this.$refs.cdWrapper.style[transform] = `translate3d(${-x}px,${y}px,0) scale(${scale})`;
-        this.$refs.cdWrapper.style[transition] = 'all 0.4s'
+        cdWrapperEl.style[transform] = `translate3d(${-x}px,${y}px,0) scale(${scale})`;
+        cdWrapperEl.style[transition] = 'all 0.4s'
 
-        this.$refs.cdWrapper.addEventListener('transitionend', done);
+        cdWrapperEl.addEventListener('transitionend', done);
       },
 
       afterLeave(){
-        this.$refs.cdWrapper.style[transform] = '';
-        this.$refs.cdWrapper.style[transition] = '';
+        let cdWrapperEl = $('.cd-wrapper')[0];
+        cdWrapperEl.style[transform] = '';
+        cdWrapperEl.style[transition] = '';
       },
 
       //切换播放
@@ -292,7 +349,11 @@
 
       lyricHandle({lineNum, txt}){
         this.currentLineNum = lineNum;
-        this.scrollToEle(lineNum, 1000);
+
+        //优化 手指让它滚动时，不要让它再自动滚
+        if (this.canAutoScroll) {
+          this.scrollToEle(lineNum, 1000);
+        }
       },
 
       //歌词滚动
@@ -334,10 +395,10 @@
             case modeType.sequence:
               //退回最后一首
               //这里不能用--,不然的话就直接赋值了
-              index = (this.currentIndex - 1) < 0 ? this.songList.length - 1 : (this.currentIndex - 1);
+              index = (this.currentIndex - 1) < 0 ? this.playList.length - 1 : (this.currentIndex - 1);
               break;
             case modeType.random:
-              index = Math.floor(Math.random() * this.songList.length);
+              index = Math.floor(Math.random() * this.playList.length);
               break;
           }
 
@@ -361,10 +422,10 @@
         let index = -1;
         switch (this.playMode) {
           case modeType.sequence:
-            index = (this.currentIndex + 1) === this.songList.length ? 0 : (this.currentIndex + 1);
+            index = (this.currentIndex + 1) === this.playList.length ? 0 : (this.currentIndex + 1);
             break;
           case modeType.random:
-            index = Math.floor(Math.random() * this.songList.length);
+            index = Math.floor(Math.random() * this.playList.length);
             break;
           case modeType.loop:
             index = this.currentIndex;
@@ -418,7 +479,9 @@
 
           //修复暂停又开始播放的bug
           if (!this.playing) {
-            this.currentLyric.pause();
+            //hack 这里手动写一个歌词pause方法
+            this.currentLyric.state = 1;
+            this.currentLyric.togglePlay();
           }
         }
       },
@@ -430,6 +493,9 @@
         this.touch.startY = e.touches[0].pageY;
         this.touch.offsetX = 0;
         this.touch.moveArr = []; //优化用的
+
+        //记录第一次滑动的y值
+        //this.touch.startTranslateY = this.getTranslateY($('#lyric-wrapper').css('transform'));
       },
 
       onLyricSlideMove(e){
@@ -437,10 +503,12 @@
           return;
         }
 
+        this.canAutoScroll = false; //优化 手指让它滚动时，不要让它再自动滚
         let offsetX = e.touches[0].pageX - this.touch.startX;
         let offsetY = e.touches[0].pageY - this.touch.startY;
 
         if (Math.abs(offsetX) <= Math.abs(offsetY)) {
+          //this._translateY(offsetY);
           return;
         }
 
@@ -455,7 +523,7 @@
 
         this.$refs.mainMiddleR.style[transition] = '';
         this.$refs.mainMiddleR.style[transform] = `translate3d(${finalWidth}px,0,0)`;
-        this.$refs.cdWrapper.style[opacity] = 1 - Math.abs(finalWidth / window.innerWidth);
+        this.$refs.mainMiddleL.style[opacity] = 1 - Math.abs(finalWidth / window.innerWidth);
         this.touch.offsetX = finalWidth;
 
         // 优化措施 例如用户先往左滑 再往右滑 存下上次滑动的值
@@ -468,6 +536,8 @@
       },
 
       onLyricSlideEnd(e){
+        this.canAutoScroll = true; //优化 手指让它滚动时，不要让它再自动滚
+
         //竖着滑
         if (this.touch.offsetX === 0) {
           return;
@@ -475,7 +545,7 @@
 
         let windowWidth = window.innerWidth;
         let mainMiddleR = this.$refs.mainMiddleR;
-        let cdWrapper = this.$refs.cdWrapper;
+        let mainMiddleL = this.$refs.mainMiddleL;
         let ratio = Math.abs(this.touch.offsetX) / windowWidth;
 
         mainMiddleR.style[transition] = 'all 0.3s ease';
@@ -483,22 +553,22 @@
         if (this.showMode === 'cd') {
           if (ratio > 0.1 && this.touch.offsetX < 0 && this.touch.moveArr[1] < this.touch.moveArr[0]) {
             mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
-            cdWrapper.style[opacity] = 0;
+            mainMiddleL.style[opacity] = 0;
             this.showMode = 'lyric';
           } else {
             mainMiddleR.style[transform] = `translate3d(0,0,0)`;
-            cdWrapper.style[opacity] = 1;
+            mainMiddleL.style[opacity] = 1;
           }
         }
 
         else if (this.showMode === 'lyric') {
           if (ratio < 0.9 && this.touch.moveArr[1] > this.touch.moveArr[0]) {
             mainMiddleR.style[transform] = `translate3d(0,0,0)`;
-            cdWrapper.style[opacity] = 1;
+            mainMiddleL.style[opacity] = 1;
             this.showMode = 'cd';
           } else {
             mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
-            cdWrapper.style[opacity] = 0;
+            mainMiddleL.style[opacity] = 0;
           }
         }
 
@@ -506,17 +576,18 @@
       },
 
       onLyricToggle(){
-        let cdWrapper = this.$refs.cdWrapper;
+        let mainMiddleL = this.$refs.mainMiddleL;
         let mainMiddleR = this.$refs.mainMiddleR;
         let windowWidth = window.innerWidth;
 
         mainMiddleR.style[transition] = '';
         if (this.showMode === 'cd') {
-          cdWrapper.style[opacity] = 0;
+          mainMiddleL.style[opacity] = 0;
           mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
           this.showMode = 'lyric';
         } else {
-          cdWrapper.style[opacity] = 1;
+          this.restartRotate();
+          mainMiddleL.style[opacity] = 1;
           mainMiddleR.style[transform] = `translate3d(0,0,0)`;
           this.showMode = 'cd';
         }
@@ -526,6 +597,14 @@
         this.touch.initial = false;
         this.touch.offsetX = 0;
         this.touch.moveArr = [];
+      },
+
+      //重启rotate动画 方法是把元素删除再加入
+      restartRotate(){
+        let el = $('.cd-wrapper');
+        let newone = el.clone(true);
+        el.before(newone);
+        $('.cd-container .cd-wrapper:last-child').remove();
       },
 
       //计算动画所需要的数值
@@ -545,65 +624,33 @@
       },
 
       //歌曲名是否超过长度 true为超过了长度
-      _getminiSongWidth(){
-        let songWidth = $('.mini-songName').width();
-        let wrapperWidth = $('.songName-wrapper').width();
-        return {songWidth, wrapperWidth};
+      getWrapperAndContent(){
+        let contentEl = $('.mini-songName');
+        let wrapperEl = $('.songName-wrapper');
+        return {contentEl, wrapperEl};
       },
 
-      _startShowMoreAnimation(songWidth, wrapperWidth){
-        setTimeout(function () {
-          $('.songName-wrapper').css('text-overflow', 'inherit');
-        }, 2000);
+      //向上滑动，先不调用scroll滑动方法
+      //_translateY(offsetY){
+      //  let lyricScroll = this.$refs.lyricScroll;
+      //  let translateY = this.getTranslateY($('#lyric-wrapper').css('transform'));
+      //
+      //  let finalOffset = this.touch.startTranslateY + offsetY;
+      //  if (translateY > 0) {
+      //    lyricScroll.disable();
+      //    lyricScroll.$el.style[transform] = `translate3d(0,${Math.max(0, finalOffset)}px,0)`;
+      //  } else {
+      //    lyricScroll.enable();
+      //    //移动完剩余的距离
+      //    lyricScroll.scrollTo(0, this.touch.startTranslateY + offsetY, 0);
+      //  }
+      //},
 
-        let timeRatio = (songWidth + wrapperWidth) / songWidth;
-        let step1 = {
-          0: {
-            transform: `translateX(0)`
-          },
-          100: {
-            transform: `translateX(${-songWidth}px)`
-          }
-        };
-
-        let step2 = {
-          0: {
-            transform: `translateX(${wrapperWidth}px)`
-          },
-          100: {
-            transform: `translateX(${-songWidth}px)`
-          }
-        };
-        //设置动画
-        animations.registerAnimation({
-          name: 'step1',
-          animation: step1,
-          presets: {
-            delay: 2000,
-            duration: 10000,
-            easing: 'linear'
-          }
-        });
-        animations.registerAnimation({
-          name: 'step2',
-          animation: step2,
-          presets: {
-            duration: 10000 * timeRatio,
-            easing: 'linear',
-            iterations: 'infinite'
-          }
-        });
-
-        animations.runAnimation($('.mini-songName'), 'step1', function () {
-          animations.runAnimation($('.mini-songName'), 'step2');
-        });
-      },
-
-      _endShowMoreAnimation(){
-        animations.unregisterAnimation('step1');
-        animations.unregisterAnimation('step2');
-        $('.songName-wrapper').css('text-overflow', 'ellipsis');
-      },
+      //由matrix 提取出translateY值
+      //getTranslateY(translateYStr){
+      //  let regexp = /matrix\((.+)\)/;
+      //  return +regexp.exec(translateYStr)[1].split(',')[5].trim();
+      //},
 
       ...mapMutations({
         'setFullScreen': 'SET_FULLSCREEN',
@@ -620,13 +667,10 @@
           this.$refs.audio.play();
           this.getLyric();
 
-          let {songWidth, wrapperWidth} = this._getminiSongWidth();
           //切歌后先终止之前的动画
-          this._endShowMoreAnimation();
-
-          if (wrapperWidth < songWidth) {
-            this._startShowMoreAnimation(songWidth, wrapperWidth);
-          }
+          let el = this.getWrapperAndContent();
+          this.endShowMoreAnimation(el);
+          this.startShowMoreAnimation(el);
         });
       },
 
@@ -658,17 +702,12 @@
           this.$refs.progressBar.setOffset(this.percent * wholeBarWidth);
 
           //判断歌名是否超过了长度
-          let {songWidth, wrapperWidth} = this._getminiSongWidth();
-          if (wrapperWidth >= songWidth) {
-            this._endShowMoreAnimation();
-            return;
-          }
+          let el = this.getWrapperAndContent();
+          this.endShowMoreAnimation(el);
 
           //不是全屏的情况下
           if (!fullScreen) {
-            this._startShowMoreAnimation(songWidth, wrapperWidth);
-          } else {
-            this._endShowMoreAnimation();
+            this.startShowMoreAnimation(el);
           }
         })
       },
@@ -802,38 +841,85 @@
           right: 0;
           bottom: 1.5rem;
           top: 0.95rem;
-          overflow: hidden;
           font-size: 0;
 
           .main-middle-l {
             /*等比例*/
             width: 100%;
-            padding-top: 80%;
+            height: 100%;
             position: relative;
             display: inline-block;
             vertical-align: top;
 
-            .cd-wrapper {
-              position: absolute;
-              width: 80%;
-              height: 100%;
-              margin: 0 auto;
-              top: 0;
-              left: 0;
-              right: 0;
-              border-radius: 50%;
-              border: 10px solid hsla(0, 0%, 100%, .1);
-              overflow: hidden;
-              transition: all 0.3s ease;
+            .cd-container {
+              width: 100%;
+              padding-top: 80%;
+              position: relative;
 
-              .container {
-                border-radius: 50%;
+              .cd-wrapper {
+                position: absolute;
+                width: 80%;
+                margin: 0 auto;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 overflow: hidden;
+                transition: all 0.3s ease;
 
-                .cd-image {
+                .container {
                   width: 100%;
                   height: 100%;
+                  box-sizing: border-box;
+                  border-radius: 50%;
+                  overflow: hidden;
+                  border: 10px solid hsla(0, 0%, 100%, .1);
+                  position: relative;
+
+                  .cd-instead {
+                    width: 100%;
+                    height: 100%;
+                    transform: scale(1.4) translate(0.03rem, 0.05rem);
+                    position: absolute;
+                    left: 0;
+                  }
+
+                  .cd-image {
+                    width: 100%;
+                    height: 100%;
+                    position: absolute;
+                    left: 0;
+                    z-index: 10;
+                  }
                 }
+              }
+            }
+          }
+
+          .currentLyric-wrapper {
+            position: absolute;
+            bottom: 0.4rem;
+            font-size: $font-size-medium-x;
+            color: $color-text-ll;
+            width: 80%;
+            margin: 0 auto;
+            left: 0;
+            right: 0;
+            text-align: center;
+            line-height: 0.2rem;
+
+            .first-line {
+              @include nowrap();
+              &.isActive {
+                color: $color-theme;
+              }
+            }
+
+            .second-line {
+              @include nowrap();
+              margin-top: 0.08rem;
+              &.isActive {
+                color: $color-theme;
               }
             }
           }
@@ -853,6 +939,7 @@
               height: 100%;
               letter-spacing: 0.01rem;
               margin: 0 auto;
+              /*transform: translateY(190px);*/
 
               .lyric {
                 white-space: normal;
@@ -945,10 +1032,20 @@
         left: 0.1rem;
         flex: 0 0 auto;
 
+        .cd-instead {
+          width: 100%;
+          height: 100%;
+          transform: scale(1.4);
+          position: absolute;
+          left: 0;
+        }
+
         .cd-image {
           width: 100%;
           border-radius: 50%;
           overflow: hidden;
+          position: absolute;
+          left: 0;
         }
       }
 

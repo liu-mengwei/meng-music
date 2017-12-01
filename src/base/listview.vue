@@ -110,6 +110,10 @@
         this.scrollY = newY;
       },
 
+      refresh(){
+        this.$refs.listview.refresh();
+      },
+
       _scrollTo(index){
         this.scrollY = -this.heightList[index];
         //better-scroll已经做好边界情况处理

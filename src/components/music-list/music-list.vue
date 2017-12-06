@@ -11,14 +11,31 @@
       <!--遮罩层-->
       <div class="filter" :style="getBgImage" ref="filter">
       </div>
-      <div class="back"></div>
-      <div class="play-container" v-show="songList.length>0" ref="playContainer"
-           @touchstart="onPlayAllStart"
-           @touchend="onPlayAllEnd">
-        <span class="icon-play"></span>
+    </div>
+    <div class="bg-content">
+      <div class="bottom-content" ref="bottomContent">
+        <div class="play-container" v-show="songList.length>0" ref="playContainer"
+             @touchstart="onPlayAllStart"
+             @touchend="onPlayAllEnd">
+          <span class="icon-play"></span>
         <span class="play-title">
-          {{modeType}}播放全部<sub class="songList-num">/{{songList.length}}</sub>
+          播放全部<sub class="songList-num">/{{songList.length}}</sub>
         </span>
+        </div>
+        <div class="play-options">
+          <div class="mode-container" :class="{'active':opened}" @click="openStatusList">
+            <div class="mode-icon" :class="modeCls"></div>
+            <span class="mode-text" v-text="modeText"></span>
+            <span class="fa fa-angle-down"></span>
+            <div class="statusList-container">
+              <status-list ref="statusList" :bgBlack="true" @close="onClose"></status-list>
+            </div>
+          </div>
+          <div id="musicList-search" class="search-container r">
+            <input type="text" class="search-text" @focus="onSearchFocus" @blur="onSearchBlur">
+            <span class="search-btn fa fa-search"></span>
+          </div>
+        </div>
       </div>
     </div>
     <!--给外层设置高度-->
@@ -26,7 +43,7 @@
     <scroll :data="songList" class="songs-wrapper" ref="list" :probeType="probeType" :listenScroll="listenScroll"
             @scroll="scroll" style="overflow:visible">
       <div class="songs-list-container" ref="songListContainer">
-        <song-list :songList="songList"></song-list>
+        <song-list :songList="songList" :rank="rank"></song-list>
       </div>
       <div class="loading-container" v-if="songList.length == 0">
         <loading></loading>
@@ -39,11 +56,13 @@
 <script type="text/ecmascript-6">
   import SongList from 'components/song-list/song-list'
   import Scroll from 'base/scroll'
+  import StatusList from 'components/status-list/status-list'
   import {getStyle, addClass, removeClass} from 'common/js/dom'
   import Loading from 'base/loading'
   import {mapGetters, mapActions} from 'vuex'
   import {modeType} from '../../store/config'
   import {miniPlayMixin, showMoreMixin} from '../../common/js/mixin'
+  import {getModeCls, getModelText} from '../../common/js/playMode'
   import $ from 'jquery'
 
 
@@ -63,6 +82,10 @@
       bgImage: {
         type: String,
         default: ''
+      },
+      rank: {
+        type: Boolean,
+        default: false
       }
     },
 
@@ -70,7 +93,8 @@
       return {
         probeType: 3,
         listenScroll: true,
-        imageHeight: 0
+        imageHeight: 0,
+        opened: false
       }
     },
 
@@ -101,6 +125,14 @@
     },
 
     computed: {
+      modeCls(){
+        return getModeCls(this.playMode);
+      },
+
+      modeText(){
+        return getModelText(this.playMode);
+      },
+
       getBgImage(){
         console.log('this.bgImage' + this.bgImage);
         return `background-image: url(${this.bgImage})`
@@ -131,14 +163,16 @@
           pos = -(this.imageHeight - titleHeight);
           this.$refs.bgImage.style.height = `${titleHeight}px`;
           this.$refs.bgImage.style.paddingTop = 0;
+          this.$refs.bgImage.style.overflow = 'hidden';
           this.$refs.bgImage.style.zIndex = 10;
-          this.$refs.playContainer.style.display = 'none';
+          this.$refs.bottomContent.style.display = 'none';
         } else {
           //恢复原状
           this.$refs.bgImage.style.height = 0;
           this.$refs.bgImage.style.paddingTop = '70%';
+          this.$refs.bgImage.style.overflow = 'visible';
           this.$refs.bgImage.style.zIndex = 0;
-          this.$refs.playContainer.style.display = 'block';
+          this.$refs.bottomContent.style.display = 'block';
         }
 
         let scale = 1;
@@ -174,11 +208,28 @@
         this.setPlayList({songList: this.songList, index});
       },
 
+      onSearchFocus(){
+        $('#musicList-search').addClass('isActive');
+      },
+
+      onSearchBlur(){
+        $('#musicList-search').removeClass('isActive');
+      },
+
       handleMiniPlay(){
         if (this.playList.length > 0) {
           this.$refs.list.$el.style['bottom'] = '0.7rem';
           this.$refs.list.refresh()
         }
+      },
+
+      openStatusList(){
+        this.opened = true;
+        this.$refs.statusList.open();
+      },
+
+      onClose(){
+        this.opened = false;
       },
 
       ...mapActions([
@@ -189,7 +240,8 @@
     components: {
       SongList,
       Scroll,
-      Loading
+      Loading,
+      StatusList
     }
   }
 
@@ -200,6 +252,7 @@
   @import "../../common/scss/variable";
   @import "../../common/scss/icon.css";
   @import "../../common/scss/mixin";
+  @import "../../common/scss/font-awesome.min.css";
 
   .music-list {
     position: fixed;
@@ -252,7 +305,6 @@
       background-size: cover;
       position: relative;
       background-color: #333;
-      overflow: hidden;
 
       .filter {
         width: 100%;
@@ -261,47 +313,119 @@
         bottom: 0;
         background-size: cover;
       }
+    }
 
-      .back {
-        position: absolute;
-        left: 0;
-      }
+    .bg-content {
+      position: absolute;
+      width: 100%;
+      padding-top: 70%;
+      top: 0;
 
-      .play-container {
+      .bottom-content {
         position: absolute;
-        border: 1px solid $color-theme;
-        border-radius: 20px;
-        padding: 0.1rem 0.2rem;
-        text-align: center;
-        bottom: 0.2rem;
+        bottom: 0;
         left: 0;
         right: 0;
-        width: 1.25rem;
-        margin: 0 auto;
-        transition: all 0.3s ease;
 
-        &.active {
-          background: $color-theme;
+        .play-container {
+          border: 1px solid $color-theme;
+          border-radius: 20px;
+          padding: 0.1rem 0.08rem;
+          text-align: center;
+          width: 1.25rem;
+          margin: 0 auto;
+          transition: all 0.3s ease;
+
+          &.active {
+            background: $color-theme;
+
+            .icon-play {
+              color: #fff;
+            }
+
+            .play-title {
+              color: #fff;
+            }
+          }
 
           .icon-play {
-            color: #fff;
+            color: $color-theme;
+            margin-right: 0.02rem;
           }
 
           .play-title {
-            color: #fff;
+            color: $color-theme;
+
+            .songList-num {
+              vertical-align: text-bottom;
+            }
           }
         }
 
-        .icon-play {
-          color: $color-theme;
-          margin-right: 0.02rem;
-        }
+        .play-options {
+          display: flex;
+          padding: 0.1rem 0.2rem;
 
-        .play-title {
-          color: $color-theme;
+          .mode-container {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 0.3rem;
+            color: rgba(255, 255, 255, 0.8);
 
-          .songList-num {
-            vertical-align: text-bottom;
+            &.active {
+              color: $color-theme;
+            }
+
+            .mode-icon {
+              font-size: $font-size-large-x;
+              margin-right: 0.05rem;
+            }
+
+            .mode-text {
+              margin-right: 0.05rem;
+            }
+
+            .statusList-container {
+              position: absolute;
+              top: 0.8rem;
+              left: 0.01rem;
+            }
+          }
+
+          .search-container {
+            flex: 1 1 auto;
+            display: flex;
+            position: relative;
+            height: 0.3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            align-items: center;
+
+            &.isActive {
+              color: $color-theme;
+              border-bottom-color: $color-theme;
+            }
+
+            .search-text {
+              flex: 1 1 auto;
+              color: #fff;
+              border: none;
+              background: transparent;
+              position: relative;
+              top: 0.03rem;
+              padding: 0.05rem 0 0.1rem;
+            }
+
+            .search-text:hover, .search-text:active, .search-text:focus {
+              outline: none;
+            }
+
+            .search-btn {
+              flex: 0 0 auto;
+              opacity: 0.7;
+              float: right;
+            }
           }
         }
       }

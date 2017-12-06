@@ -1,16 +1,11 @@
 <template>
   <transition name="mode">
     <div class="status-list-wrapper" v-show="opened">
-      <div class="bg-layer" @click="close"></div>
-      <div class="status-list">
-        <div class="list-item" @click="changeMode(0)">
-          <i class="icon icon-sequence"></i> 顺序播放
-        </div>
-        <div class="list-item" @click="changeMode(1)">
-          <i class="icon icon-random"></i> 随机播放
-        </div>
-        <div class="list-item" @click="changeMode(2)">
-          <i class="icon icon-loop"></i> 单曲循环
+      <div class="bg-layer" @click.stop="close"></div>
+      <div class="status-list" :class="{'bgBlack':bgBlack}">
+        <div class="list-item" :class="{'selected':playMode === index-1}" v-for="index in 3"
+             @click.stop="changeMode(index-1)">
+          <i class="icon" :class="modeCls(index-1)"></i><span v-text="modeText(index-1)"></span>
         </div>
       </div>
     </div>
@@ -21,8 +16,16 @@
   import {mapGetters, mapMutations} from 'vuex'
   import {getData} from 'common/js/dom'
   import $ from 'jquery'
+  import {getModeCls, getModelText} from '../../common/js/playMode'
 
   export default {
+    props: {
+      //背景是否透明
+      bgBlack: {
+        type: Boolean,
+        default: false
+      }
+    },
 
     data(){
       return {
@@ -34,45 +37,34 @@
       console.log('status-list创建');
     },
 
-    mounted(){
-      console.log('status-list渲染');
-      this.$nextTick(() => {
-        //不优雅的解决方式
-        this._getModeCls(this.playMode);
-      });
-    },
-
     methods: {
-
       open(){
         this.opened = true;
       },
 
       close(){
         this.opened = false;
+        this.$emit('close');
       },
 
       changeMode(index){
         this.setPlayMode(index);
         this.opened = false;
+        this.$emit('close');
       },
 
-      _getModeCls(index){
-        $('.list-item').removeClass('selected');
-        $('.list-item').eq(index).addClass('selected');
+      modeCls(index){
+        return getModeCls(index);
+      },
+
+      modeText(index){
+        return getModelText(index);
       },
 
       ...mapMutations({
         'setPlayMode': 'SET_PLAY_MODE'
       })
 
-    },
-
-    watch: {
-      //这个和实际的顺序就耦合了，还有啥解决办法
-      playMode(index){
-        this._getModeCls(index);
-      }
     },
 
     computed: {
@@ -84,17 +76,17 @@
 <style rel="stylesheet/scss" lang="scss" scoped>
   @import "../../common/scss/variable";
 
-  .mode-enter, .mode-leave-to {
-    opacity: 0;
-  }
+  /*.mode-enter, .mode-leave-to {*/
+  /*opacity: 0;*/
+  /*}*/
 
-  .mode-leave, .mode-enter-to {
-    opacity: 1;
-  }
+  /*.mode-leave, .mode-enter-to {*/
+  /*opacity: 1;*/
+  /*}*/
 
-  .mode-enter-active, .mode-leave-active {
-    transition: all 0.3s ease;
-  }
+  /*.mode-enter-active, .mode-leave-active {*/
+  /*transition: all 0.3s ease;*/
+  /*}*/
 
   .status-list-wrapper {
     position: relative;
@@ -115,6 +107,10 @@
       z-index: 110;
       border-radius: 5px;
       position: absolute;
+
+      &.bgBlack {
+        background: #000;
+      }
 
       .list-item {
         padding: 0.12rem 0.18rem;

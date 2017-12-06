@@ -1,10 +1,13 @@
 <template>
   <ul class="song-list">
-    <li class="song-item" :class="{'selected':currentSong.id === item.id}"
+    <li class="song-item"
+        :class="{'selected':currentSong.id === item.id}"
         @click="selectSong(item,index,$event)"
         v-for="(item,index) in songList">
       <div class="selected-sign" v-show="currentSong.id === item.id"></div>
       <i class="plus fa fa-plus-square-o"></i>
+      <div class="rank-img" v-show="rank && index < 3" :class="getRankBg(index + 1)"></div>
+      <span class="rank-num" v-show="rank && index >= 3">{{index + 1}}</span>
       <i class="musicSign fa fa-music"></i>
       <div class="content-wrapper">
         <h1 class="song-name">{{item.name}}</h1>
@@ -24,6 +27,10 @@
       songList: {
         type: Array,
         default: []
+      },
+      rank: {
+        type: Boolean,
+        default: false
       }
     },
 
@@ -53,6 +60,20 @@
         return ret;
       },
 
+      getRankBg(index){
+        let bg = '';
+        if (index === 1) {
+          bg = 'first';
+        }
+        if (index === 2) {
+          bg = 'second';
+        }
+        if (index === 3) {
+          bg = 'third';
+        }
+        return bg;
+      },
+
       _startRollDown(el){
         let distance = window.innerHeight - el.offset().top;
         let top = el.position().top;
@@ -64,6 +85,7 @@
           el.css('visibility', 'hidden');
         });
       },
+
 
       ...mapActions([
         'setPlayList'
@@ -87,6 +109,7 @@
 <style rel="stylesheet/scss" lang="scss" scoped>
   @import "../../common/scss/variable";
   @import "../../common/scss/font-awesome.min.css";
+  @import "../../common/scss/mixin";
 
   .song-list {
     .song-item {
@@ -113,6 +136,31 @@
         align-self: stretch;
       }
 
+      .rank-img {
+        margin-left: 0.25rem;
+        @include square(0.2rem);
+        background-size: contain;
+
+        &.first {
+          @include bg-img('first')
+        }
+
+        &.second {
+          @include bg-img('second')
+        }
+
+        &.third {
+          @include bg-img('third')
+        }
+      }
+
+      .rank-num {
+        margin-left: 0.29rem;
+        margin-right: 0.05rem;
+        color: $color-theme;
+        font-size: $font-size-large;
+      }
+
       .plus {
         flex: 0 0 auto;
         margin-left: 0.25rem;
@@ -127,7 +175,7 @@
       }
 
       .content-wrapper {
-        padding: 0.125rem 0;
+        padding: 0.125rem 0.1rem 0.125rem 0;
         margin-left: 0.2rem;
         border-bottom: 1px solid rgba(70, 70, 70, 0.3);
         flex: 1 1 auto;

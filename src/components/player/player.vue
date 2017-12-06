@@ -73,13 +73,13 @@
               </progress-bar>
             </div>
             <div class="operators">
-              <div class="status-list-container">
+              <div class="statusList-container">
                 <status-list ref="statusList"></status-list>
               </div>
               <div class="icon" :class="modeCls" @click="openStatusList"></div>
-              <div class="icon icon-prev" :class="disabledCls" @click="prev"></div>
+              <div class="icon icon-prev" :class="disabledCls" @click="prev()"></div>
               <div class="icon playBtn" :class="[disabledCls,playCls]" @click="togglePlay"></div>
-              <div class="icon icon-next" :class="disabledCls" @click="next"></div>
+              <div class="icon icon-next" :class="disabledCls" @click="next()"></div>
               <div class="icon icon-favorite"></div>
             </div>
           </div>
@@ -124,7 +124,8 @@
            @ended="next"
            @timeupdate="timeupdate"
            @canplay="canplay"
-           @error="error"></audio>
+           @error="error">
+    </audio>
   </div>
 </template>
 
@@ -139,6 +140,7 @@
   import Lyric from 'lyric-parser'
   import Scroll from '../../base/scroll.vue'
   import {showMoreMixin} from '../../common/js/mixin'
+  import {getModeCls} from '../../common/js/playMode'
 
   const transform = getStyle('transform');
   const transition = getStyle('transition');
@@ -150,6 +152,7 @@
     data(){
       return {
         musicReady: false,
+        canToggleMusic: false, //todo 还有啥更好的解决办法
         backStatus: false,
         currentTime: 0,
         beforeIndexArr: [],
@@ -176,7 +179,7 @@
 
       //cd 下面的歌词
       firstLine(){
-        if (!this.currentLyric || this.currentLyric.lines.length === 0 || this.currentLineNum === -1) {
+        if (!this.currentLyric || !(this.currentLyric.lines instanceof Array) || !this.currentLyric.lines[this.currentLineNum]) {
           return '';
         }
 
@@ -190,7 +193,7 @@
       },
 
       secondLine(){
-        if (!this.currentLyric || this.currentLyric.lines.length === 0 || this.currentLineNum === -1) {
+        if (!this.currentLyric || !(this.currentLyric.lines instanceof Array) || !this.currentLyric.lines[this.currentLineNum]) {
           return '';
         }
 
@@ -223,28 +226,16 @@
       },
 
       cdCls(){
-        return this.playing ? 'rotate' : 'rotate pause';
+        return this.playing && this.musicReady ? 'rotate' : 'rotate pause';
       },
 
       disabledCls(){
-        return this.musicReady ? '' : 'disabled';
+        return this.canToggleMusic ? '' : 'disabled';
       },
 
       //播放图标样式
       modeCls(){
-        let mode = 'icon-';
-        switch (this.playMode) {
-          case modeType.sequence:
-            mode += 'sequence';
-            break;
-          case modeType.random:
-            mode += 'random';
-            break;
-          case modeType.loop:
-            mode += 'loop';
-            break;
-        }
-        return mode;
+        return getModeCls(this.playMode);
       },
 
       percent(){
@@ -330,11 +321,9 @@
       //获取歌词
       getLyric(){
         //先清理之前歌词的定时器
-        if (this.currentLyric) {
-          this.currentLyric.stop();
-        }
-
         this.currentSong.getLyric().then((res) => {
+          this.lyricReset();
+
           this.currentLyric = new Lyric(res, this.lyricHandle);
           if (this.musicReady && this.playing) {
             this.currentLyric.play();
@@ -370,19 +359,23 @@
       },
 
       //前一首
-      prev(){
+      prev(playMode){
         //歌曲未准备好时
-        if (!this.musicReady) {
+        if (!this.canToggleMusic) {
           return;
         }
 
         //往回切的时候不能入栈
         this.backStatus = true;
+        //默认会传event 所以会做以下处理
+        if (typeof playMode !== 'number') {
+          playMode = this.playMode;
+        }
 
         let index = -1;
 
         //单曲循环的优先级更高
-        if (this.playMode === modeType.loop) {
+        if (playMode === modeType.loop) {
           this.$refs.audio.load();
           this.$refs.audio.play();
           this.musicReady = false;
@@ -409,18 +402,25 @@
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
+        this.canToggleMusic = false;
         this.lyricReset();
       },
 
-      next(){
-        if (!this.musicReady) {
+      //可能会传一个参数
+      next(playMode){
+
+        if (!this.canToggleMusic) {
           return;
         }
 
         this.backStatus = false;
+        //默认会传event 所以会做以下处理
+        if (typeof playMode !== 'number') {
+          playMode = this.playMode;
+        }
 
         let index = -1;
-        switch (this.playMode) {
+        switch (playMode) {
           case modeType.sequence:
             index = (this.currentIndex + 1) === this.playList.length ? 0 : (this.currentIndex + 1);
             break;
@@ -437,17 +437,20 @@
             return;
         }
 
+        this.lyricReset();
         this.setCurrentIndex(index);
         this.setPlaying(true);
         this.musicReady = false;
-        this.lyricReset();
+        this.canToggleMusic = false;
       },
 
       lyricReset(){
+
         if (this.currentLyric) {
           this.currentLyric.stop();
         }
         this.currentLyric = null;
+        this.currentLineNum = -1;
       },
 
       //打开播放模式列表
@@ -458,11 +461,15 @@
       //可以播放
       canplay(){
         this.musicReady = true;
+        this.canToggleMusic = true;
       },
 
       //音乐获取失败
       error(){
-        this.musicReady = true;
+
+        this.musicReady = false;
+        this.canToggleMusic = true; //就这一个区别
+        this.next(modeType.sequence);
       },
 
       //获取时间进度
@@ -661,10 +668,11 @@
 
     watch: {
       currentSong(newVal, oldVal){
+        this.musicReady = false;
+
         this.$nextTick(() => {
           //记录这次播放的歌曲
           this.beforeSong = this.oldVal;
-          this.$refs.audio.play();
           this.getLyric();
 
           //切歌后先终止之前的动画
@@ -714,10 +722,15 @@
 
       //播放歌词逻辑
       musicReady(newVal){
+        if (newVal && this.playing) {
+          this.$refs.audio.play();
+        }
+
         if (newVal && this.playing && this.currentLyric) {
           this.currentLyric.play();
         }
       }
+
     },
 
     components: {
@@ -997,7 +1010,7 @@
               color: $color-theme;
             }
 
-            .status-list-container {
+            .statusList-container {
               position: absolute;
               bottom: 0.65rem;
               left: 0.33rem;

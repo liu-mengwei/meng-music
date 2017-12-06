@@ -1,7 +1,6 @@
 import {mapGetters} from 'vuex';
 import animations from 'create-keyframe-animation'
 
-
 //当迷你播放器出现时处理滚动高度问题
 export const miniPlayMixin = {
   mounted(){
@@ -28,6 +27,7 @@ export const miniPlayMixin = {
     }
   }
 };
+
 
 //显示更多标题的动画
 export const showMoreMixin = {

@@ -31,10 +31,13 @@
 
     methods: {
       handleMiniPlay(){
+        let bottom = 0;
         if (this.playList.length > 0) {
-          this.$refs.singerWrapper.style['bottom'] = '0.7rem';
-          this.$refs.listview.refresh();
+          bottom = '0.7rem';
         }
+
+        this.$refs.singerWrapper.style['bottom'] = bottom;
+        this.$refs.listview.refresh();
       },
 
       //监听选择歌手的事件

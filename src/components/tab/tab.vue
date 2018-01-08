@@ -37,7 +37,6 @@
 
         .tab-title {
           display: inline-block;
-          color: $color-text;
           @include line-height(0.26rem);
 
           &.router-link-active {

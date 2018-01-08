@@ -10,6 +10,23 @@
   color: gray !important;
 }
 
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotate {
+  animation: rotate 30s infinite linear !important;
+
+  &.pause {
+    animation-play-state: paused !important;
+  }
+}
+
 @mixin bg-img($url) {
   background-image: url('#{$url}@2x.png');
 

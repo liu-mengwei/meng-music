@@ -15,5 +15,8 @@ export const SET_SEQUENCE_LIST = 'SET_SEQUENCE_LIST';
 
 export const SET_CURRENT_INDEX = 'SET_CURRENT_INDEX';
 
+export const SET_NEXT_INDEX = 'SET_NEXT_INDEX';
+
 export const SET_DISC = 'SET_DISC';
 
+export const SET_SEARCH_HISTORY_LIST = 'SET_SEARCH_HISTORY_LIST';

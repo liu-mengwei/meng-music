@@ -3,7 +3,7 @@
 -->
 <template>
   <transition name="slide">
-    <music-list :bgImage="singer.avatar" :title="singer.name" :songList="songList"></music-list>
+    <music-list :bgImage="singer.avatar" :title="singer.name" :songListProp="songList"></music-list>
   </transition>
 </template>
 

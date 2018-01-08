@@ -37,7 +37,7 @@
   import {ERR_OK, SLIDER_RATIO} from 'api/config'
   import Slider from 'base/slider'
   import Scroll from 'base/scroll'
-  import Loading from 'base/loading'
+  import Loading from 'base/loading/loading'
   import {miniPlayMixin} from '../../common/js/mixin'
   import {mapMutations} from 'vuex'
   import {touchFeedBack} from 'common/js/dom'
@@ -72,10 +72,13 @@
 
     methods: {
       handleMiniPlay(){
+        let bottom = 0;
         if (this.playList.length > 0) {
-          this.$refs.recommend.style['bottom'] = '0.7rem';
-          this.$refs.recommendContent.refresh()
+          bottom = '0.7rem';
         }
+        this.$refs.recommend.style['bottom'] = bottom;
+        this.$refs.recommendContent.refresh();
+
       },
 
       selectDisc(item, e){
@@ -168,6 +171,7 @@
 
               .disc-title {
                 margin-bottom: 0.15rem;
+                color: $color-text;
               }
 
               .disc-desc {

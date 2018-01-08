@@ -32,7 +32,7 @@
             </div>
           </div>
           <div id="musicList-search" class="search-container r">
-            <input type="text" class="search-text" @focus="onSearchFocus" @blur="onSearchBlur">
+            <input type="text" class="search-text" v-model="query" @focus="onSearchFocus" @blur="onSearchBlur">
             <span class="search-btn fa fa-search"></span>
           </div>
         </div>
@@ -40,15 +40,28 @@
     </div>
     <!--给外层设置高度-->
     <div class="bg-layer" ref="bgLayer"></div>
-    <scroll :data="songList" class="songs-wrapper" ref="list" :probeType="probeType" :listenScroll="listenScroll"
-            @scroll="scroll" style="overflow:visible">
+    <scroll :data="songList"
+            class="songs-wrapper"
+            ref="list"
+            :probeType="probeType"
+            :listenScroll="listenScroll"
+            @scroll="scroll"
+            style="overflow:visible">
       <div class="songs-list-container" ref="songListContainer">
-        <song-list :songList="songList" :rank="rank"></song-list>
+        <song-list :songList="songList" :rank="rank" @drop="drop"></song-list>
       </div>
-      <div class="loading-container" v-if="songList.length == 0">
-        <loading></loading>
+      <div class="loading-container">
+        <loading v-if="songListProp.length == 0"></loading>
+        <no-result v-if="songListProp.length != 0 && songList.length == 0"></no-result>
       </div>
     </scroll>
+    <div class="balls-container" v-for="(ball,index) in balls" ref="ballsContainer">
+      <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter">
+        <div class="ball-wrapper" v-show="ball.show">
+          <span class="fa fa-plus"></span>
+        </div>
+      </transition>
+    </div>
   </div>
 </template>
 
@@ -58,15 +71,17 @@
   import Scroll from 'base/scroll'
   import StatusList from 'components/status-list/status-list'
   import {getStyle, addClass, removeClass} from 'common/js/dom'
-  import Loading from 'base/loading'
+  import Loading from 'base/loading/loading'
   import {mapGetters, mapActions} from 'vuex'
   import {modeType} from '../../store/config'
   import {miniPlayMixin, showMoreMixin} from '../../common/js/mixin'
   import {getModeCls, getModelText} from '../../common/js/playMode'
   import $ from 'jquery'
-
+  import NoResult from 'base/no-result/no-result'
+  import {debounce} from 'common/js/util'
 
   const titleHeight = 42;
+  const transform = getStyle('transform');
 
   export default {
     mixins: [miniPlayMixin, showMoreMixin],
@@ -75,7 +90,7 @@
         type: String,
         default: ''
       },
-      songList: {
+      songListProp: {
         type: Array,
         default: []
       },
@@ -94,17 +109,22 @@
         probeType: 3,
         listenScroll: true,
         imageHeight: 0,
-        opened: false
+        opened: false,
+        query: '',
+        songList: [],
+        balls: [
+          {show: false, el: {}},
+          {show: false, el: {}},
+          {show: false, el: {}},
+          {show: false, el: {}},
+          {show: false, el: {}}
+        ],
+        dropBalls: []
       }
-    },
-
-    created(){
-      console.log('music-list组件创建');
     },
 
     mounted(){
       console.log('music-list组件渲染');
-
       this.imageHeight = this.$refs.filter.clientHeight;
       this.$refs.list.$el.style.top = `${this.imageHeight}px`;
       this.$refs.bgLayer.style.top = `${this.imageHeight}px`;
@@ -122,6 +142,16 @@
     destroyed(){
       console.log('music-list销毁');
       this.endShowMoreAnimation();
+    },
+
+    watch: {
+      query(val){
+        debounce(this.searchSongList, 200)(val);
+      },
+
+      songListProp(val){
+        this.songList = val.slice();
+      }
     },
 
     computed: {
@@ -192,6 +222,55 @@
         this.$refs.bgLayer.style.transform = `translate3d(0,${pos}px,0)`;
       },
 
+      searchSongList(val){
+        let reg = new RegExp('(.+)?' + val + '(.+)?');
+        this.songList = this.songListProp.filter((song) => {
+          return reg.test(song.name);
+        });
+      },
+
+      beforeEnter(el){
+        let toBall = this.$refs.ballsContainer[0];
+
+        for (let i = 0; i < this.balls.length; i++) {
+          let ball = this.balls[i];
+          //为了找出显示的小球
+          if (ball.show === true) {
+            //console.log(ball.el.getBoundingClientRect());
+            let offset = ball.el.getBoundingClientRect();
+            let toBallOffset = toBall.getBoundingClientRect();
+
+            //小球向右偏移的距离
+            let offsetX = toBallOffset.left - offset.left;
+            let offsetY = toBallOffset.bottom - offset.bottom;
+            //小球显示
+            el.style.display = '';
+            el.style[transform] = 'translateY(' + (-offsetY) + 'px)';
+            el.children[0].style[transform] = 'translateX(' + (-offsetX) + 'px) rotate(0)';
+          }
+        }
+      },
+
+      enter(el){
+        /* eslint-disable no-unused-vars*/
+        let rf = el.offsetHeight;
+        this.$nextTick(() => {
+          el.style[transform] = 'translateY(0)';
+          el.children[0].style[transform] = 'translateX(0) rotate(720deg)';
+          el.style.transition = 'all 1s cubic-bezier(.36,-0.76,.4,1.12)';
+          el.children[0].style.transition = 'all 1s ease';
+        });
+      },
+
+      afterEnter(el){
+        //从数组中取出头元素
+        let ball = this.dropBalls.shift();
+        if (ball) {
+          ball.show = false;
+          el.style.display = 'none';
+        }
+      },
+
       onPlayAllStart(){
         addClass(this.$refs.playContainer, 'active');
       },
@@ -217,10 +296,12 @@
       },
 
       handleMiniPlay(){
+        let bottom = 0;
         if (this.playList.length > 0) {
-          this.$refs.list.$el.style['bottom'] = '0.7rem';
-          this.$refs.list.refresh()
+          bottom = '0.7rem';
         }
+        this.$refs.list.$el.style['bottom'] = bottom;
+        this.$refs.list.refresh();
       },
 
       openStatusList(){
@@ -232,8 +313,24 @@
         this.opened = false;
       },
 
+      drop: function (index, el) {
+        for (let i = 0; i < this.balls.length; i++) {
+          let ball = this.balls[i];
+          if (ball.show === false) {
+            ball.show = true;
+            ball.el = el;
+
+            this.dropBalls.push(ball);
+            let song = this.songList[index];
+            this.insertSong({song, next: false});
+            return;
+          }
+        }
+      },
+
       ...mapActions([
-        'setPlayList'
+        'setPlayList',
+        'insertSong'
       ])
     },
 
@@ -241,7 +338,8 @@
       SongList,
       Scroll,
       Loading,
-      StatusList
+      StatusList,
+      NoResult
     }
   }
 
@@ -281,6 +379,7 @@
         text-align: center;
         width: 100%;
         @include nowrap();
+        color: $color-text;
 
         .title {
           display: inline-block;
@@ -455,6 +554,13 @@
         transform: translate(-50%, -50%);
         text-align: center;
       }
+    }
+
+    .balls-container {
+      position: fixed;
+      bottom: 0.2rem;
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 </style>

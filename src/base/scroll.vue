@@ -26,6 +26,16 @@
       listenScroll: {
         type: Boolean,
         default: false
+      },
+      //监听上拉刷新
+      listenPullUp: {
+        type: Boolean,
+        default: false
+      },
+      //针对移动端的优化
+      listenBeforeScroll: {
+        type: Boolean,
+        default: false
       }
     },
 
@@ -73,6 +83,24 @@
           //派发事件
           this.scroll.on('scroll', (pos) => {
             this.$emit('scroll', pos.y);
+          });
+        }
+
+        if (this.listenPullUp) {
+          this.scroll.on('scrollEnd', () => {
+            console.log(this.scroll.y);
+            console.log(this.scroll.maxScrollY);
+
+            if (this.scroll.y <= this.scroll.maxScrollY + 10) {
+              //判断是否划到底
+              this.$emit('scrollToEnd');
+            }
+          })
+        }
+
+        if (this.listenBeforeScroll) {
+          this.scroll.on('beforeScrollStart', () => {
+            this.$emit('beforeScrollStart');
           });
         }
       }

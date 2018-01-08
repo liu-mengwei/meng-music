@@ -28,7 +28,11 @@
 </script>
 
 <style lang="scss" rel="stylesheet/scss">
+  @import "common/scss/variable";
+
   #app {
+    color: $color-text-ll;
+
     .tab {
       margin-top: 0.05rem;
       margin-bottom: 0.07rem;

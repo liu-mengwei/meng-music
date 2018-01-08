@@ -4,7 +4,7 @@
       :bgImage="bgImage"
       :title="topInfo.ListName"
       :rank="true"
-      :songList="songList">
+      :songListProp="songList">
     </music-list>
   </transition>
 </template>

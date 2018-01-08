@@ -51,10 +51,14 @@
 
 
       handleMiniPlay(){
+        let bottom = 0;
         if (this.playList.length > 0) {
-          this.$refs.rank.style['bottom'] = '0.7rem';
-          this.$refs.rankWrapper.refresh();
+          bottom = '0.7rem';
         }
+
+        this.$refs.rank.style['bottom'] = bottom;
+        this.$refs.rankWrapper.refresh();
+
       }
     },
 

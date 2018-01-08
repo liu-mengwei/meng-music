@@ -19,7 +19,7 @@
 
 
 <style rel="stylesheet/scss" lang="scss" scoped>
-  @import "../common/scss/variable";
+  @import "../../common/scss/variable";
 
   .loading {
     font-size: $font-size-small;

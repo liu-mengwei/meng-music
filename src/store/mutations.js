@@ -34,6 +34,14 @@ const mutations = {
 
   [types.SET_DISC](state, disc){
     state.disc = disc;
+  },
+
+  [types.SET_SEARCH_HISTORY_LIST](state, searchHistoryList){
+    state.searchHistoryList = searchHistoryList;
+  },
+
+  [types.SET_NEXT_INDEX](state, nextIndex){
+    state.nextIndex = nextIndex;
   }
 };
 

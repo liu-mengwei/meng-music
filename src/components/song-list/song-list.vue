@@ -1,20 +1,22 @@
 <template>
-  <ul class="song-list">
-    <li class="song-item"
-        :class="{'selected':currentSong.id === item.id}"
-        @click="selectSong(item,index,$event)"
-        v-for="(item,index) in songList">
-      <div class="selected-sign" v-show="currentSong.id === item.id"></div>
-      <i class="plus fa fa-plus-square-o"></i>
-      <div class="rank-img" v-show="rank && index < 3" :class="getRankBg(index + 1)"></div>
-      <span class="rank-num" v-show="rank && index >= 3">{{index + 1}}</span>
-      <i class="musicSign fa fa-music"></i>
-      <div class="content-wrapper">
-        <h1 class="song-name">{{item.name}}</h1>
-        <span class="song-singer" v-text="songSingerTxt(item)"></span>
-      </div>
-    </li>
-  </ul>
+  <div class="container">
+    <ul class="song-list">
+      <li class="song-item"
+          :class="{'selected':currentSong.id === item.id}"
+          @click="selectSong(item,index,$event)"
+          v-for="(item,index) in songList">
+        <div class="selected-sign" v-show="currentSong.id === item.id"></div>
+        <i class="plus fa fa-plus-square-o" @click.stop="drop(index,$event)"></i>
+        <div class="rank-img" v-show="rank && index < 3" :class="getRankBg(index + 1)"></div>
+        <span class="rank-num" v-show="rank && index >= 3">{{index + 1}}</span>
+        <i class="musicSign fa fa-music"></i>
+        <div class="content-wrapper">
+          <h1 class="song-name">{{item.name}}</h1>
+          <span class="song-singer" v-text="songSingerTxt(item)"></span>
+        </div>
+      </li>
+    </ul>
+  </div>
 </template>
 
 <script type="text/ecmascript-6">
@@ -86,6 +88,9 @@
         });
       },
 
+      drop(index, event){
+        this.$emit('drop', index, event.target);
+      },
 
       ...mapActions([
         'setPlayList'
@@ -100,7 +105,6 @@
     computed: {
       ...mapGetters(['currentIndex', 'currentSong', 'playing'])
     }
-
   };
 
 
@@ -118,6 +122,10 @@
       align-items: center;
 
       &.selected {
+        .plus {
+          color: $color-theme;
+        }
+
         .content-wrapper {
           .song-name, .song-singer {
             color: $color-theme;

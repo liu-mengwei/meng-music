@@ -115,7 +115,7 @@
           <div class="operators">
             <span class="icon playBtn" @click.stop="togglePlay" :class="playCls"></span>
             <span class="icon icon-next" @click.stop="next"></span>
-            <span class="icon-playlist"></span>
+            <span class="icon-playlist" @click.stop="openPlayList"></span>
           </div>
         </div>
       </div>
@@ -126,12 +126,14 @@
            @canplay="canplay"
            @error="error">
     </audio>
+    <play-list ref="playList"></play-list>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
   import StatusList from 'components/status-list/status-list'
   import ProgressBar from 'components/progress-bar/progress-bar'
+  import PlayList from 'components/play-list/play-list'
   import {mapGetters, mapMutations} from 'vuex'
   import animations from 'create-keyframe-animation'
   import {getPx, getStyle} from '../../common/js/dom'
@@ -141,6 +143,7 @@
   import Scroll from '../../base/scroll.vue'
   import {showMoreMixin} from '../../common/js/mixin'
   import {getModeCls} from '../../common/js/playMode'
+  import Song from 'class/Song'
 
   const transform = getStyle('transform');
   const transition = getStyle('transition');
@@ -593,7 +596,7 @@
           mainMiddleR.style[transform] = `translate3d(${-windowWidth}px,0,0)`;
           this.showMode = 'lyric';
         } else {
-          this.restartRotate();
+          //this.restartRotate();
           mainMiddleL.style[opacity] = 1;
           mainMiddleR.style[transform] = `translate3d(0,0,0)`;
           this.showMode = 'cd';
@@ -606,7 +609,12 @@
         this.touch.moveArr = [];
       },
 
+      openPlayList(){
+        this.$refs.playList.show();
+      },
+
       //重启rotate动画 方法是把元素删除再加入
+      // todo 这里是无效的，如果这样做的话绑定的属性就不再是响应的了
       restartRotate(){
         let el = $('.cd-wrapper');
         let newone = el.clone(true);
@@ -668,6 +676,10 @@
 
     watch: {
       currentSong(newVal, oldVal){
+        if (newVal instanceof Song === false) {
+          return;
+        }
+
         this.musicReady = false;
 
         this.$nextTick(() => {
@@ -736,7 +748,8 @@
     components: {
       StatusList,
       ProgressBar,
-      Scroll
+      Scroll,
+      PlayList
     }
   }
 </script>
@@ -808,6 +821,7 @@
           margin-top: 0.1rem;
           margin-bottom: 0.3rem;
           position: relative;
+          color: $color-text-ll;
 
           .icon-back {
             position: absolute;
@@ -1087,6 +1101,7 @@
               .mini-songName {
                 display: inline-block;
                 margin-bottom: 0.02rem;
+                color: $color-text;
               }
             }
 
@@ -1122,23 +1137,6 @@
           }
         }
       }
-    }
-  }
-
-  @keyframes rotate {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .rotate {
-    animation: rotate 30s infinite linear !important;
-
-    &.pause {
-      animation-play-state: paused !important;
     }
   }
 </style>

@@ -11,8 +11,8 @@
             </div>
             <i class="clear-btn r fa fa-trash" @click="openConfirm"></i>
           </div>
-          <scroll class="content-middle" :data="playList" ref="contentMiddle">
-            <transition-group tag="ul" name="remove">
+          <scroll class="content-middle" :data="playList" ref="contentMiddle" :refreshDelay="200">
+            <transition-group tag="ul" name="remove" ref="list">
               <li :key="song.id" class="song-item" @click.stop="selectSong(index)"
                   ref="songItem"
                   v-for="(song,index) in playList">
@@ -23,14 +23,14 @@
                   </div>
                 </div>
                 <div class="item-right">
-                  <div class="song-name l">{{song.name}} - {{song.singer}}</div>
+                  <div class="song-name l" v-html="getDisplayName(song)"></div>
                   <div class="song-delete fa fa-trash r" @click.stop="removeSongItem(index)"></div>
                 </div>
               </li>
             </transition-group>
           </scroll>
           <div class="content-bottom">
-            <div class="add-songs">
+            <div class="add-songs" @click.stop="openAddSongs">
               <span class="fa fa-plus"></span>
               <span class="add-txt">添加歌曲到队列</span>
             </div>
@@ -39,6 +39,9 @@
         <div class="close" @click="hide">关闭</div>
       </div>
       <confirm @confirm="removeAllPlayList" ref="confirm" confirmText="确定清空播放队列？"></confirm>
+      <div class="add-songs-wrapper">
+        <add-songs ref="addSongs"></add-songs>
+      </div>
     </div>
   </transition>
 </template>
@@ -48,6 +51,7 @@
   import {mapGetters, mapActions, mapMutations} from 'vuex'
   import Confirm from 'base/confirm/confirm'
   import {getModeCls, getModelText} from '../../common/js/playMode'
+  import AddSongs from 'components/add-songs/add-songs'
 
   export default {
     data(){
@@ -64,6 +68,10 @@
         this.showFlag = true;
       },
 
+      getDisplayName(song){
+        return `${song.name} - ${song.singer}`;
+      },
+
       openConfirm(){
         this.$refs.confirm.toggle();
       },
@@ -71,6 +79,10 @@
       removeAllPlayList(){
         this.clearPlayList();
         this.hide();
+      },
+
+      openAddSongs(){
+        this.$refs.addSongs.toggle();
       },
 
       selectSong(index){
@@ -98,7 +110,9 @@
 
       scrollToSong(){
         if (this.currentIndex > 2) {
-          this.$refs.contentMiddle.scrollToElement(this.$refs.songItem[this.currentIndex - 2], 1000);
+          //todo 注意这里不能用this.$refs.songItem 这个和渲染出来的dom的顺序有差别
+          //todo 新增的只是添加到了this.$refs.songItem的最后面
+          this.$refs.contentMiddle.scrollToElement(this.$refs.list.$el.children[this.currentIndex - 2], 1000);
         }
       },
 
@@ -146,7 +160,8 @@
 
     components: {
       Scroll,
-      Confirm
+      Confirm,
+      AddSongs
     }
 
   }

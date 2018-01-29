@@ -6,13 +6,13 @@
           @click="selectSong(item,index,$event)"
           v-for="(item,index) in songList">
         <div class="selected-sign" v-show="currentSong.id === item.id"></div>
-        <i class="plus fa fa-plus-square-o" @click.stop="drop(index,$event)"></i>
+        <i class="plus fa fa-plus-square-o" @click.stop="drop(index,$event)" v-show="add"></i>
         <div class="rank-img" v-show="rank && index < 3" :class="getRankBg(index + 1)"></div>
         <span class="rank-num" v-show="rank && index >= 3">{{index + 1}}</span>
         <i class="musicSign fa fa-music"></i>
         <div class="content-wrapper">
-          <h1 class="song-name">{{item.name}}</h1>
-          <span class="song-singer" v-text="songSingerTxt(item)"></span>
+          <h1 class="song-name" v-html="item.name"></h1>
+          <span class="song-singer" v-html="songSingerTxt(item)"></span>
         </div>
       </li>
     </ul>
@@ -22,6 +22,7 @@
 <script type="text/ecmascript-6">
   import {mapActions, mapGetters, mapMutations} from 'vuex'
   import {touchFeedBack} from 'common/js/dom'
+  import Song from 'class/Song'
   import $ from 'jquery'
 
   export default {
@@ -33,6 +34,23 @@
       rank: {
         type: Boolean,
         default: false
+      },
+      add: {
+        type: Boolean,
+        default: true
+      },
+      insertPlayList: {
+        type: Boolean,
+        default: false
+      },
+      next: {
+        type: Boolean,
+        default: false
+      },
+      //我最喜欢的处理的特殊逻辑
+      favourite: {
+        type: Boolean,
+        default: false
       }
     },
 
@@ -41,13 +59,41 @@
         //todo 有什么更好的办法
         touchFeedBack(e.currentTarget);
 
+        //只插入列表 这地方写坏了
+        if (this.insertPlayList) {
+
+          //todo 经过遍历以后，这里的item就变成Object,而不是Song类了
+          let song = new Song(item);
+          this.insertSong({song, next: this.next});
+          this.$emit('insertSong');
+          return;
+        }
+
         //如果是选中已经播放的歌曲 则会暂停
         if (this.currentSong && this.currentSong.id === item.id) {
           this.setPlaying(!this.playing);
         } else {
           //滚落动画
           this._startRollDown($(e.currentTarget).children('.musicSign'));
-          this.setPlayList({songList: this.songList, index});
+
+          //如果已经存在歌曲
+
+          if (this.playList.length === 0 || this.favourite) {
+
+            this.setPlayList({songList: this.songList, index});
+          } else {
+
+            let index = this.playList.findIndex((song) => {
+              return song.id === item.id;
+            });
+
+            if (index >= 0) {
+              this.setCurrentIndex(index);
+            } else {
+              let song = new Song(item);
+              this.insertSong({song, next: true});
+            }
+          }
         }
       },
 
@@ -93,17 +139,19 @@
       },
 
       ...mapActions([
-        'setPlayList'
+        'setPlayList',
+        'insertSong'
       ]),
 
       ...mapMutations({
-        'setPlaying': 'SET_PLAYING'
+        'setPlaying': 'SET_PLAYING',
+        'setCurrentIndex': 'SET_CURRENT_INDEX'
       })
 
     },
 
     computed: {
-      ...mapGetters(['currentIndex', 'currentSong', 'playing'])
+      ...mapGetters(['currentIndex', 'currentSong', 'playing', 'playList'])
     }
   };
 
@@ -171,8 +219,9 @@
 
       .plus {
         flex: 0 0 auto;
-        margin-left: 0.25rem;
+        margin-left: 0.15rem;
         font-size: 0.16rem;
+        padding: 0.1rem;
       }
 
       .fa-music {
@@ -184,7 +233,7 @@
 
       .content-wrapper {
         padding: 0.125rem 0.1rem 0.125rem 0;
-        margin-left: 0.2rem;
+        margin-left: 0.15rem;
         border-bottom: 1px solid rgba(70, 70, 70, 0.3);
         flex: 1 1 auto;
 

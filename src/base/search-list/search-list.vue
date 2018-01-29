@@ -1,11 +1,11 @@
 <template>
-  <ul class="search-list">
-    <li class="search-item" v-for="search in searchList" @click.stop="selectHistory(search)">
+  <transition-group tag="ul" class="search-list" name="remove">
+    <li :key="search" class="search-item" v-for="search in searchList" @click.stop="selectHistory(search)">
       <span class="search-clock fa fa-clock-o"></span>
       <div class="search-text">{{search}}</div>
       <span class="search-close icon-delete" @click.stop="removeSearch(search)"></span>
     </li>
-  </ul>
+  </transition-group>
 </template>
 
 <script type="text/ecmascript-6">
@@ -40,9 +40,20 @@
   .search-list {
     .search-item {
       display: flex;
-      padding: 0.15rem 0.2rem;
+      padding: 0 0.2rem;
       border-top: 1px solid rgba(120, 120, 120, 0.2);
       align-items: center;
+      line-height: 0.5rem;
+      height: 0.5rem;
+      overflow: hidden;
+
+      &.remove-leave-active {
+        transition: all 0.2s ease;
+      }
+
+      &.remove-leave-to {
+        height: 0;
+      }
 
       .search-clock {
         flex: 0 0 auto;

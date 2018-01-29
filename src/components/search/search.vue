@@ -3,7 +3,7 @@
     <div class="searchBox-wrapper">
       <search-box ref="searchBox" @query="onQuery"></search-box>
     </div>
-    <scroll class="scrollContent-wrapper" ref="scrollWrapper" :data="mixinArray">
+    <scroll class="scrollContent-wrapper" ref="scrollWrapper" :data="mixinArray" :refreshDelay="200">
       <div class="scroll-content">
         <div class="search-recommend" v-show="!query">
           <p class="hot-title">热门搜索</p>
@@ -14,7 +14,8 @@
         <div class="searchList-wrapper" v-show="!query && searchHistoryList.length>0">
           <div class="search-content">
             <search-list :searchList="searchHistoryList" @removeSearch="remove"
-                         @selectHistory="selectHotKey"></search-list>
+                         @selectHistory="selectHotKey">
+            </search-list>
           </div>
           <div class="search-clear">
             <span class="clear-text" @click="removeAll">清空搜索历史</span>
@@ -44,15 +45,14 @@
   import SearchList from 'base/search-list/search-list'
   import Confirm from 'base/confirm/confirm'
   import Scroll from 'base/scroll'
-  import {miniPlayMixin} from 'common/js/mixin'
+  import {miniPlayMixin, searchMixin} from 'common/js/mixin'
 
   export default {
-    mixins: [miniPlayMixin],
+    mixins: [miniPlayMixin, searchMixin],
     data(){
       return {
         hotKeys: [],
-        showSinger: true,
-        query: ''
+        showSinger: true
       }
     },
 
@@ -61,23 +61,6 @@
     },
 
     methods: {
-      inputBlur(){
-        this.$refs.searchBox.blur();
-      },
-
-      selectHotKey(hotkey){
-        this.$refs.searchBox.setQuery(hotkey);
-        this.saveSearch(hotkey);
-      },
-
-      onQuery(query){
-        this.query = query;
-      },
-
-      insertSearchHistory(){
-        this.saveSearch(this.query);
-      },
-
       removeAll(){
         this.$refs.confirm.toggle();
       },
@@ -101,11 +84,7 @@
         })
       },
 
-      remove(search){
-        this.removeSearch(search);
-      },
-
-      ...mapActions(['saveSearch', 'removeSearch', 'removeAllSearch'])
+      ...mapActions(['removeAllSearch'])
     },
 
     computed: {
@@ -159,7 +138,7 @@
           padding: 0 0.2rem;
 
           .hot-title {
-            margin-bottom: 0.2rem;
+            margin: 0.1rem 0 0.2rem;
           }
 
           .shortCut-container {

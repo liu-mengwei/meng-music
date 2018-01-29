@@ -1,3 +1,6 @@
+import {wrapperToSongList} from 'class/Song'
+
+
 export const singer = state => state.singer;
 
 export const playing = state => state.playing;
@@ -19,6 +22,14 @@ export const currentSong = (state) => {
 export const disc = state => state.disc;
 
 export const searchHistoryList = state => state.searchHistoryList;
+
+export const latestSongList = (state) => {
+  return wrapperToSongList(state.latestSongList);
+};
+
+export const favouriteList = (state) => {
+  return wrapperToSongList(state.favouriteList);
+};
 
 
 

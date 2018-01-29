@@ -241,8 +241,8 @@
             let toBallOffset = toBall.getBoundingClientRect();
 
             //小球向右偏移的距离
-            let offsetX = toBallOffset.left - offset.left;
-            let offsetY = toBallOffset.bottom - offset.bottom;
+            let offsetX = toBallOffset.left - offset.left - ball.el.clientWidth / 2;
+            let offsetY = toBallOffset.bottom - offset.bottom + ball.el.clientHeight / 2;
             //小球显示
             el.style.display = '';
             el.style[transform] = 'translateY(' + (-offsetY) + 'px)';
@@ -434,6 +434,9 @@
           width: 1.25rem;
           margin: 0 auto;
           transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
 
           &.active {
             background: $color-theme;
@@ -449,7 +452,7 @@
 
           .icon-play {
             color: $color-theme;
-            margin-right: 0.02rem;
+            margin-right: 0.05rem;
           }
 
           .play-title {

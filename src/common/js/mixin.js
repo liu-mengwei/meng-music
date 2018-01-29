@@ -1,4 +1,4 @@
-import {mapGetters} from 'vuex';
+import {mapGetters, mapActions} from 'vuex';
 import animations from 'create-keyframe-animation'
 
 //当迷你播放器出现时处理滚动高度问题
@@ -109,5 +109,38 @@ export const showMoreMixin = {
         wrapperEl.css('text-overflow', 'ellipsis');
       }
     }
+  }
+};
+
+export const searchMixin = {
+  data(){
+    return {
+      query: ''
+    }
+  },
+
+  methods: {
+    inputBlur(){
+      this.$refs.searchBox.blur();
+    },
+
+    onQuery(query){
+      this.query = query;
+    },
+
+    insertSearchHistory(){
+      this.saveSearch(this.query);
+    },
+
+    selectHotKey(hotkey){
+      this.$refs.searchBox.setQuery(hotkey);
+      this.saveSearch(hotkey);
+    },
+
+    remove(search){
+      this.removeSearch(search);
+    },
+
+    ...mapActions(['removeSearch', 'saveSearch'])
   }
 };

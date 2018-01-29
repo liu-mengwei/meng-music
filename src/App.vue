@@ -38,16 +38,16 @@
       margin-bottom: 0.07rem;
     }
 
-    .toggle-enter {
-      transform: translateX(100%);
-    }
+    /*.toggle-enter {*/
+      /*transform: translateX(100%);*/
+    /*}*/
 
-    .toggle-enter-to {
-      transform: translateX(0);
-    }
+    /*.toggle-enter-to {*/
+      /*transform: translateX(0);*/
+    /*}*/
 
-    .toggle-enter-active {
-      transition: all 0.3s ease;
-    }
+    /*.toggle-enter-active {*/
+      /*transition: all 0.3s ease;*/
+    /*}*/
   }
 </style>

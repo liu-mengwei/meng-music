@@ -36,6 +36,11 @@
       listenBeforeScroll: {
         type: Boolean,
         default: false
+      },
+
+      refreshDelay: {
+        type: Number,
+        default: 20
       }
     },
 
@@ -112,7 +117,7 @@
         //必须等待dom更新 才能刷新scroll
         setTimeout(() => {
           this.refresh();
-        }, 20);
+        }, this.refreshDelay);
       }
     }
   }

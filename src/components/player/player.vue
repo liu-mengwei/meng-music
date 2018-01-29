@@ -80,7 +80,8 @@
               <div class="icon icon-prev" :class="disabledCls" @click="prev()"></div>
               <div class="icon playBtn" :class="[disabledCls,playCls]" @click="togglePlay"></div>
               <div class="icon icon-next" :class="disabledCls" @click="next()"></div>
-              <div class="icon icon-favorite"></div>
+              <div class="icon icon-favorite" @click="setFavourite()"
+                   :class="[{'favouriteActive':favouriteActive},favouriteCls]"></div>
             </div>
           </div>
         </div>
@@ -134,7 +135,7 @@
   import StatusList from 'components/status-list/status-list'
   import ProgressBar from 'components/progress-bar/progress-bar'
   import PlayList from 'components/play-list/play-list'
-  import {mapGetters, mapMutations} from 'vuex'
+  import {mapGetters, mapMutations, mapActions} from 'vuex'
   import animations from 'create-keyframe-animation'
   import {getPx, getStyle} from '../../common/js/dom'
   import $ from 'jquery';
@@ -162,7 +163,9 @@
         currentLyric: null, //当前歌词列表,
         currentLineNum: -1,
         showMode: 'cd', //当前是cd 还是歌词
-        canAutoScroll: true
+        canAutoScroll: true,
+        favouriteActive: false,
+        timeId: -1
       }
     },
 
@@ -236,6 +239,13 @@
         return this.canToggleMusic ? '' : 'disabled';
       },
 
+      favouriteCls(){
+        let index = this.favouriteList.findIndex((song) => {
+          return song.id === this.currentSong.id;
+        });
+        return index >= 0 ? 'red' : '';
+      },
+
       //播放图标样式
       modeCls(){
         return getModeCls(this.playMode);
@@ -245,7 +255,7 @@
         return this.currentTime / this.currentSong.duration;
       },
 
-      ...mapGetters(['fullScreen', 'playList', 'currentSong', 'playing', 'playMode', 'currentIndex'])
+      ...mapGetters(['fullScreen', 'playList', 'currentSong', 'playing', 'playMode', 'currentIndex', 'favouriteList'])
     },
 
     methods: {
@@ -325,6 +335,7 @@
       getLyric(){
         //先清理之前歌词的定时器
         this.currentSong.getLyric().then((res) => {
+
           this.lyricReset();
 
           this.currentLyric = new Lyric(res, this.lyricHandle);
@@ -354,8 +365,8 @@
           return;
         }
 
-        if (lineNum > 6) {
-          this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLines[lineNum - 6], time);
+        if (lineNum > 4) {
+          this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLines[lineNum - 4], time);
         } else {
           this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLines[0], time);
         }
@@ -463,16 +474,20 @@
 
       //可以播放
       canplay(){
+
+        clearTimeout(this.timeId);
+        this.saveLatestSongList(this.currentSong);
         this.musicReady = true;
         this.canToggleMusic = true;
       },
 
       //音乐获取失败
       error(){
-
         this.musicReady = false;
         this.canToggleMusic = true; //就这一个区别
-        this.next(modeType.sequence);
+        this.timeId = setTimeout(() => {
+          this.next(modeType.sequence);
+        }, 3000);
       },
 
       //获取时间进度
@@ -645,6 +660,27 @@
         return {contentEl, wrapperEl};
       },
 
+      setFavourite(){
+
+        this.saveFavouriteList(this.currentSong);
+        this.favouriteActive = true;
+        setTimeout(() => {
+          this.favouriteActive = false;
+        }, 200);
+      },
+
+      //移动端适配
+      calCdSize(){
+        //移动端cd适配
+        debugger;
+        let height = $('.main-middle-l .cd-container').height();
+        let width = $('.main-middle-l .cd-container').width();
+
+        let radius = width * 0.75 < height ? width * 0.75 : height;//取最小值
+        $('.main-middle-l .cd-wrapper').width(radius);
+        $('.main-middle-l .cd-wrapper').height(radius);
+      },
+
       //向上滑动，先不调用scroll滑动方法
       //_translateY(offsetY){
       //  let lyricScroll = this.$refs.lyricScroll;
@@ -666,17 +702,23 @@
       //  let regexp = /matrix\((.+)\)/;
       //  return +regexp.exec(translateYStr)[1].split(',')[5].trim();
       //},
-
       ...mapMutations({
         'setFullScreen': 'SET_FULLSCREEN',
         'setPlaying': 'SET_PLAYING',
         'setCurrentIndex': 'SET_CURRENT_INDEX'
-      })
+      }),
+
+      ...mapActions(['saveLatestSongList', 'saveFavouriteList'])
     },
 
     watch: {
       currentSong(newVal, oldVal){
-        if (newVal instanceof Song === false) {
+
+        if (!newVal) {
+          return;
+        }
+        //todo 虽然取到的值是一样的，但依然能触发currentsong 估计因为currentIndex改变也能触发这个
+        if (newVal && oldVal && newVal.id === oldVal.id) {
           return;
         }
 
@@ -724,6 +766,8 @@
           //判断歌名是否超过了长度
           let el = this.getWrapperAndContent();
           this.endShowMoreAnimation(el);
+
+          this.calCdSize();
 
           //不是全屏的情况下
           if (!fullScreen) {
@@ -867,7 +911,7 @@
           left: 0;
           right: 0;
           bottom: 1.5rem;
-          top: 0.95rem;
+          top: 0.6rem;
           font-size: 0;
 
           .main-middle-l {
@@ -880,17 +924,12 @@
 
             .cd-container {
               width: 100%;
-              padding-top: 80%;
-              position: relative;
+              height: 80%;
+              display: flex;
+              align-items: center;
 
               .cd-wrapper {
-                position: absolute;
-                width: 80%;
                 margin: 0 auto;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
                 overflow: hidden;
                 transition: all 0.3s ease;
 
@@ -924,8 +963,6 @@
           }
 
           .currentLyric-wrapper {
-            position: absolute;
-            bottom: 0.4rem;
             font-size: $font-size-medium-x;
             color: $color-text-ll;
             width: 80%;
@@ -971,7 +1008,8 @@
               .lyric {
                 white-space: normal;
                 .lyric-line {
-                  margin: 0.15rem 0;
+                  margin: 0;
+                  padding: 0.1rem 0;
 
                   &.currentLine {
                     color: $color-theme;
@@ -1032,6 +1070,15 @@
 
             .playBtn {
               font-size: 0.6rem;
+            }
+
+            .icon-favorite {
+              &.favouriteActive {
+                animation: scale 0.3s ease;
+              }
+              &.red {
+                color: rgba(255, 0, 0, 0.6);
+              }
             }
           }
         }
@@ -1136,6 +1183,20 @@
             }
           }
         }
+      }
+    }
+
+    @keyframes scale {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.3);
+      }
+
+      100% {
+        transform: scale(1);
       }
     }
   }

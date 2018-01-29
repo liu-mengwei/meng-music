@@ -37,6 +37,7 @@
 
       clearQuery(){
         this.query = '';
+        this.$emit('clearQuery');
       },
 
       blur(){

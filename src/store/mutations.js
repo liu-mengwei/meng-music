@@ -42,6 +42,14 @@ const mutations = {
 
   [types.SET_NEXT_INDEX](state, nextIndex){
     state.nextIndex = nextIndex;
+  },
+
+  [types.SET_LATEST_SONG_LIST](state, latestSongList){
+    state.latestSongList = latestSongList;
+  },
+
+  [types.SET_FAVOURITE_LIST](state, favouriteList){
+    state.favouriteList = favouriteList;
   }
 };
 

@@ -22,12 +22,12 @@
         <li class="suggest-item"
             :class="{'selected':currentSong.id === suggest.id}"
             v-for="suggest in suggestList"
-            @click="selectSong(suggest)">
+            @click="selectSong(suggest,$event)">
           <div class="selected-sign" v-show="currentSong.id === suggest.id"></div>
           <span class="item-icon fa fa-music"></span>
           <div class="item-content">
-            <div class="song-name">{{suggest.name}}</div>
-            <div class="singer-name">{{suggest.singer}}</div>
+            <div class="song-name" v-html="suggest.name"></div>
+            <div class="singer-name" v-html="suggest.singer"></div>
           </div>
         </li>
       </ul>
@@ -48,6 +48,7 @@
   import Loading from 'base/loading/loading'
   import NoResult from 'base/no-result/no-result'
   import {mapMutations, mapActions, mapGetters} from 'vuex'
+  import {touchFeedBack} from 'common/js/dom'
 
   const ROWS = 20;
 
@@ -61,6 +62,11 @@
       showSinger: {
         type: Boolean,
         default: true
+      },
+
+      insertPlayList: {
+        type: Boolean,
+        default: false
       }
     },
 
@@ -120,7 +126,15 @@
         this.$emit('select', this.singer.name);
       },
 
-      selectSong(song){
+      selectSong(item, e){
+        touchFeedBack(e.currentTarget);
+        let song = new Song(item);
+        if (this.insertPlayList) {
+          this.insertSong({song, next: false});
+          this.$emit('insertSong');
+          return;
+        }
+
         this.insertSong({song, next: true});
         this.$emit('select', song.name);
       },

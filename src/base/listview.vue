@@ -233,8 +233,9 @@
       font-size: $font-size-small;
       position: fixed;
       right: 0;
-      top: 25%;
+      top: 15%;
       border-radius: 10px;
+      z-index: 100;
 
       ul {
         li {

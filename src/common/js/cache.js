@@ -1,7 +1,10 @@
 import storage from 'good-storage'
 
 const SEARCH_MAX_LENGTH = 15;
+const FAVOURITE_MAX_LENGTH = 500;
 const SEARCH_KEY = '__search__';
+const LATEST_KEY = '__latest__';
+const FAVOURITE_KEY = '__favourite__';
 
 /**
  * @description 处理数组插入的特殊逻辑
@@ -19,10 +22,10 @@ export function insertArray(arr, query, compare, length) {
   }
 
   if (index === -1) {
-    arr.unshift(query);
-    if (arr.length > length) {
+    if (arr.length === length) {
       arr.pop();
     }
+    arr.unshift(query);
   }
 
   return arr;
@@ -65,7 +68,41 @@ export function removeSearch(query) {
 export function removeAllSearch() {
   storage.set(SEARCH_KEY, []);
 }
+export function saveLatestSongList(song) {
+  //从这里出来的已经不是song对象了
+  let latestSongList = storage.get(LATEST_KEY, []);
+
+  latestSongList = insertArray(latestSongList, song, function (item) {
+    return item.id === song.id;
+  }, SEARCH_MAX_LENGTH);
+
+  storage.set(LATEST_KEY, latestSongList);
+  return latestSongList;
+}
+
+export function saveFavouriteList(song) {
+  let favouriteList = storage.get(FAVOURITE_KEY, []);
+  let index = favouriteList.findIndex((item) => {
+    return item.id === song.id;
+  });
+  if (index >= 0) {
+    favouriteList.splice(index, 1);
+  } else {
+    favouriteList.unshift(song);
+  }
+
+  storage.set(FAVOURITE_KEY, favouriteList);
+  return favouriteList;
+}
 
 export function getSearchList() {
   return storage.get(SEARCH_KEY, []);
+}
+
+export function getFavouriteList() {
+  return storage.get(FAVOURITE_KEY, []);
+}
+
+export function getLatestList() {
+  return storage.get(LATEST_KEY, []);
 }

@@ -78,7 +78,6 @@
         }
         this.$refs.recommend.style['bottom'] = bottom;
         this.$refs.recommendContent.refresh();
-
       },
 
       selectDisc(item, e){
